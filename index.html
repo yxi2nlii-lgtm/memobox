@@ -226,9 +226,9 @@
                     prevY = bubbles[i-1].y + 60;
                 }
 
-                ctx.moveTo(prevX, prevY);
-                // 修复了 prevY 的变量引用错误
-                ctx.quadraticCurveTo((prevX + currX)/2, (prevY + currY)/2 + Math.sin(time*0.002+i)*10, currX, currY);
+// 紧接着下面这一行也要改（currX/currY 同样要加 60）
+ctx.moveTo(prevX, prevY);
+ctx.quadraticCurveTo((prevX + currX)/2, (prevY + currY)/2 + Math.sin(time*0.002+i)*10, currX, currY);
                 
                 if (!b.isDragged) {
                     const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
