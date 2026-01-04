@@ -279,98 +279,80 @@ if (duration < 350 && dist < 20) {
             return bObj;
         }
 
-      function animate(time) {
-    // 1. 彻底清空 Canvas，准备绘制新帧
-    ctx.clearRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
-    
-    const ww = window.innerWidth;
-    const wh = window.innerHeight;
+function animate(time) {
+            // 1. 清屏（考虑 DPR 缩放）
+            const dpr = window.devicePixelRatio || 1;
+            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+            
+            const ww = window.innerWidth;
+            const wh = window.innerHeight;
 
-    // 2. 动态获取头像中心点 (cx, cy)
-    // 这种方式比直接用 ww/2 更准，因为它能追踪头像在 DOM 中的实时物理位置
-    const avatar = document.querySelector('.main-avatar');
-    const rect = avatar.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-
-    ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; // 柔和的白色连线
-    ctx.lineWidth = 1.5;
-
-    bubbles.forEach((b, i) => {
-        // 3. 气泡中心点计算 (b.x/b.y 是左上角坐标，+60 修正到直径 120 的中心)
-        const currX = b.x + 60; 
-        const currY = b.y + 60;
-
-        let prevX, prevY;
-        
-        // 4. 连线逻辑：第一个气泡连头像，后续气泡互相串联成“流”
-        if (i === 0) {
-            prevX = cx; 
-            prevY = cy;
-        } else {
-            prevX = bubbles[i-1].x + 60;
-            prevY = bubbles[i-1].y + 60;
-        }
-
-        // 5. 绘制贝塞尔曲线，增加正弦波抖动 time * 0.002 使线条有流动感
-        ctx.moveTo(prevX, prevY);
-        const wave = Math.sin(time * 0.002 + i) * 12; // 波动幅度
-        ctx.quadraticCurveTo(
-            (prevX + currX) / 2, 
-            (prevY + currY) / 2 + wave, 
-            currX, 
-            currY
-        );
-
-        // 6. 物理碰撞逻辑 (保持你原本的排斥力与旋转力)
-        if (!b.isDragged) {
-            const cdx = currX - cx;
-            const cdy = currY - cy;
-            const cdist = Math.sqrt(cdx * cdx + cdy * cdy) || 1;
-
-            // 环绕动力学
-            b.vx += (-cdy / cdist) * 0.0008; 
-            b.vx += (cx - currX) * 0.00003;
-
-            // 气泡间排斥
-            bubbles.forEach((b2, j) => {
-                if (i === j) return;
-                const pdx = (b2.x + 60) - currX;
-                const pdy = (b2.y + 60) - currY;
-                const pdist = Math.hypot(pdx, pdy) || 1;
-                if (pdist < 135) {
-                    const p = (135 - pdist) * 0.02;
-                    b.vx -= (pdx / pdist) * p;
-                    b.vy -= (pdy / pdist) * p;
-                }
-            });
-
-            // 中心吸引/排斥
-            if (cdist < 100) {
-                const p = (100 - cdist) * 0.05;
-                b.vx += (cdx / cdist) * p;
-                b.vy += (cdy / cdist) * p;
+            // --- 核心修正：动态获取头像中心，防止坐标偏移 ---
+            const avatarEl = document.querySelector('.main-avatar');
+            let cx = ww / 2;
+            let cy = wh / 2;
+            
+            if (avatarEl) {
+                const rect = avatarEl.getBoundingClientRect();
+                cx = rect.left + rect.width / 2;
+                cy = rect.top + rect.height / 2;
             }
 
-            // 摩擦力与位移更新
-            b.vx *= 0.92;
-            b.vy *= 0.92;
-            b.x += b.vx;
-            b.y += b.vy;
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1.5;
+
+            bubbles.forEach((b, i) => {
+                const currX = b.x + 60; // 气泡中心
+                const currY = b.y + 60;
+
+                // --- 沿用你要求的逻辑：i=0连中心，i>0连前一个 ---
+                let prevX = cx;
+                let prevY = cy;
+                if (i > 0) {
+                    prevX = bubbles[i-1].x + 60;
+                    prevY = bubbles[i-1].y + 60;
+                }
+
+                ctx.moveTo(prevX, prevY);
+                // 绘制贝塞尔曲线增加流动感
+                ctx.quadraticCurveTo(
+                    (prevX + currX) / 2, 
+                    (prevY + currY) / 2 + Math.sin(time * 0.002 + i) * 10, 
+                    currX, 
+                    currY
+                );
+
+                // --- 物理排斥逻辑（保持不变） ---
+                if (!b.isDragged) {
+                    const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
+                    b.vx += (-cdy/cdist) * 0.0008; 
+                    b.vx += (cx - currX) * 0.00003;
+                    
+                    bubbles.forEach((b2, j) => {
+                        if(i === j) return;
+                        const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
+                        if(pdist < 135) { 
+                            const p = (135 - pdist) * 0.02; 
+                            b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p; 
+                        }
+                    });
+                    if(cdist < 100) { 
+                        const p = (100 - cdist) * 0.05; 
+                        b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p; 
+                    }
+                    b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
+                }
+                
+                // 边界限制
+                b.x = Math.max(0, Math.min(ww - 120, b.x));
+                b.y = Math.max(0, Math.min(wh - 120, b.y));
+                b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
+            });
+
+            ctx.stroke();
+            requestAnimationFrame(animate);
         }
-
-        // 7. 屏幕边界碰撞逻辑
-        b.x = Math.max(0, Math.min(ww - 120, b.x));
-        b.y = Math.max(0, Math.min(wh - 120, b.y));
-
-        // 8. 同步 DOM 渲染
-        b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
-    });
-
-    ctx.stroke();
-    requestAnimationFrame(animate);
-}
 
         window.addEventListener('mousemove', (e) => { 
             if (draggedBubble) { draggedBubble.x = e.clientX - 60; draggedBubble.y = e.clientY - 60; } 
