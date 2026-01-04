@@ -3,73 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BAMBOO FLOW - SENDER</title>
+    <title>BAMBOO FLOW - FLOW</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
+        /* 保持原有样式不变 */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
         body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; touch-action: none; color: white; }
         #stage { position: absolute; inset: 0; z-index: 2500; pointer-events: none; }
         #lineCanvas { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
         .bg-glass { position: fixed; inset: 0; z-index: -1; background: #222; background-position: center; background-size: cover; transform: scale(1.8); filter: blur(60px) brightness(0.4); }
         
-        /* 介绍区域 */
         .intro-container { position: fixed; top: 18%; width: 100%; text-align: center; z-index: 4000; pointer-events: none; padding: 0 40px; }
         #display-name { font-size: 19px; font-weight: 600; margin-bottom: 8px; opacity: 0; transition: opacity 1s; text-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         #display-desc { font-size: 11px; opacity: 0; transition: opacity 1s 0.5s; line-height: 1.6; color: rgba(255,255,255,0.6); max-width: 260px; margin: 0 auto; font-style: italic; }
 
         .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; pointer-events: none; }
-        
-        /* 头像引导容器 */
         .avatar-wrapper { position: relative; pointer-events: auto; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-        
-        .main-avatar { width: 84px; height: 84px; border-radius: 50%; background: rgba(255,255,255,0.1); overflow: hidden; z-index: 4001; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 2px solid rgba(255,255,255,0.2); }
-        .avatar-wrapper:active .main-avatar { transform: scale(0.9); }
+        .main-avatar { width: 84px; height: 84px; border-radius: 50%; background: rgba(255,255,255,0.1); overflow: hidden; z-index: 4001; transition: transform 0.3s; border: 2px solid rgba(255,255,255,0.2); }
         .main-avatar img { width: 100%; height: 100%; object-fit: cover; }
         
-        /* 水波纹光环 */
-        .ripple { position: absolute; width: 84px; height: 84px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; animation: ripple-effect 2.5s infinite; z-index: 4000; opacity: 0; pointer-events: none; }
-        .ripple:nth-child(2) { animation-delay: 1.25s; }
-        
-        @keyframes ripple-effect {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(2.2); opacity: 0; }
-        }
+        .ripple { position: absolute; width: 84px; height: 84px; border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; animation: ripple-effect 2.5s infinite; z-index: 4000; }
+        @keyframes ripple-effect { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
 
-        /* 提示样式 */
-        #status-hint { 
-            margin-top: 20px; 
-            font-size: 9px; 
-            letter-spacing: 2px; 
-            opacity: 0.5; 
-            animation: blink 2s infinite; 
-        }
+        #status-hint { margin-top: 20px; font-size: 9px; letter-spacing: 2px; opacity: 0.5; animation: blink 2s infinite; }
         @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.7; } }
 
-        /* 气泡样式 - 修复文字看不见的问题 */
+        /* 气泡样式 */
         .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); cursor: grab; pointer-events: auto; opacity: 0; display: flex; align-items: center; justify-content: center; will-change: transform, opacity; z-index: 3000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .bubble.spawned { opacity: 1; transition: opacity 1s ease-out; }
-        
-        /* 普通文字气泡 - 黑色文字 */
         .bubble.is-text { padding: 18px; font-size: 11px; color: #000000; text-align: center; line-height: 1.4; font-weight: 400; }
-        
-        /* 特殊状态气泡 */
         .bubble.is-status { background: #ffffff; border: none; color: #000000; font-weight: 700; text-transform: uppercase; font-size: 10px; }
-        
-        /* 添加按钮气泡 */
         .bubble.is-plus { border: 2px dashed rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); font-size: 32px; color: white; cursor: pointer; backdrop-filter: none; box-shadow: none; }
 
-        /* 菜单弹窗 */
+        /* 新增：自定义弹窗 UI 样式 */
+        #confirm-layer { position: fixed; inset: 0; z-index: 20000; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; }
+        .confirm-card { width: 85%; max-width: 320px; background: rgba(255,255,255,0.08); padding: 30px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        .confirm-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #fff; }
+        .confirm-card p { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.6; margin-bottom: 25px; }
+        .confirm-btns { display: flex; gap: 12px; }
+        .c-btn { flex: 1; padding: 15px; border-radius: 15px; border: none; font-weight: 700; font-family: inherit; font-size: 12px; cursor: pointer; transition: 0.2s; }
+        .c-btn.cancel { background: rgba(255,255,255,0.1); color: white; }
+        .c-btn.confirm { background: #ffffff; color: #000; }
+        .c-btn.danger { background: #ff3b30; color: white; }
+
+        /* 原有菜单 */
         #menu-layer { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
         .menu-card { width: 85%; max-width: 350px; background: #222; padding: 25px; border-radius: 25px; border: 1px solid #333; }
         .input-box { margin-bottom: 15px; }
         .input-box label { display: block; font-size: 10px; opacity: 0.5; margin-bottom: 5px; }
         .input-box input, .input-box textarea { width: 100%; background: #333; border: none; border-radius: 10px; padding: 12px; color: white; outline: none; font-family: inherit; }
         .send-btn { width: 100%; padding: 15px; border-radius: 12px; border: none; background: white; font-weight: 700; cursor: pointer; }
-        
         #reset-btn { position: fixed; top: 40px; right: 20px; z-index: 5000; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px; font-size: 9px; cursor: pointer; }
     </style>
 </head>
@@ -77,8 +64,7 @@
 
     <div class="bg-glass" id="bg-img"></div>
     <canvas id="lineCanvas"></canvas>
-    
-    <button id="reset-btn" onclick="clearAll()">RESET SYSTEM</button>
+    <button id="reset-btn" onclick="showResetConfirm()">RESET SYSTEM</button>
 
     <div class="intro-container" id="intro-box">
         <h2 id="display-name">Hi stranger...</h2>
@@ -86,7 +72,7 @@
     </div>
 
     <div class="center-hub">
-        <div class="avatar-wrapper" onclick="handleInitialPickup()">
+        <div class="avatar-wrapper" onclick="showPickupConfirm()">
             <div class="ripple"></div>
             <div class="ripple"></div>
             <div class="main-avatar">
@@ -98,6 +84,17 @@
 
     <div id="stage"></div>
 
+    <div id="confirm-layer">
+        <div class="confirm-card">
+            <h2 id="confirm-title">Title</h2>
+            <p id="confirm-msg">Message goes here...</p>
+            <div class="confirm-btns">
+                <button class="c-btn cancel" onclick="hideConfirm()">Cancel</button>
+                <button class="c-btn confirm" id="confirm-action-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <div id="menu-layer" onclick="this.style.display='none'">
         <div class="menu-card" onclick="event.stopPropagation()">
             <div class="input-box"><label>MESSAGE / CAPTION</label><textarea id="msg-text" rows="3"></textarea></div>
@@ -107,7 +104,7 @@
     </div>
 
     <script>
-        // --- 1. Firebase 配置 ---
+        // --- 1. Firebase 配置 --- (保持不变)
         const firebaseConfig = {
             apiKey: "AIzaSyC7OLP-hG6ekdLQewLrB9BFGQCuzRlbnTE",
             authDomain: "memo-6a74a.firebaseapp.com",
@@ -126,10 +123,59 @@
         const canvas = document.getElementById('lineCanvas');
         const ctx = canvas.getContext('2d');
         let bubbles = [];
-        let draggedBubble = null;
         let hasPickedUp = false;
 
-        // --- 2. 核心逻辑 ---
+        // --- 2. 弹窗控制逻辑 ---
+        function showConfirm(title, msg, onConfirm, isDanger = false) {
+            const layer = document.getElementById('confirm-layer');
+            const btn = document.getElementById('confirm-action-btn');
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-msg').innerText = msg;
+            
+            layer.style.display = 'flex';
+            setTimeout(() => layer.style.opacity = '1', 10);
+
+            btn.className = isDanger ? 'c-btn danger' : 'c-btn confirm';
+            btn.onclick = () => {
+                onConfirm();
+                hideConfirm();
+            };
+        }
+
+        function hideConfirm() {
+            const layer = document.getElementById('confirm-layer');
+            layer.style.opacity = '0';
+            setTimeout(() => layer.style.display = 'none', 300);
+        }
+
+        function showPickupConfirm() {
+            if (hasPickedUp) return;
+            showConfirm(
+                "Pick Up Memory?", 
+                "Are you sure you want to pick up this object and see its flow?", 
+                () => {
+                    msgRef.push({ 
+                        mode: 'text', 
+                        text: "SOME ONE PICKED IT UP", 
+                        type: 'urgent',
+                        time: Date.now()
+                    });
+                }
+            );
+        }
+
+        function showResetConfirm() {
+            showConfirm(
+                "Reset System?", 
+                "This will clear all messages and return to stranger mode.", 
+                () => {
+                    msgRef.remove().then(() => location.reload());
+                },
+                true
+            );
+        }
+
+        // --- 3. 核心业务逻辑 (整合原有逻辑) ---
         window.onload = function() {
             configRef.on('value', (snapshot) => {
                 const data = snapshot.val();
@@ -142,11 +188,8 @@
                     const descEl = document.getElementById('display-desc');
                     const name = data.userName || data.name || "Someone";
                     const desc = data.userDesc || data.desc || "";
-                    
                     nameEl.innerText = `Hi stranger, this is ${name}`;
-                    descEl.innerText = desc ? `“${desc}”` : ""; // 加上引号
-                    
-                    // 如果已经捡起，则隐藏文字
+                    descEl.innerText = desc ? `“${desc}”` : "";
                     if (hasPickedUp) {
                         document.getElementById('intro-box').style.display = 'none';
                     } else {
@@ -166,25 +209,24 @@
                         if (m.text === "SOME ONE PICKED IT UP") foundPickup = true;
                     });
                 }
-                
                 hasPickedUp = foundPickup;
                 const hint = document.getElementById('status-hint');
                 const ripples = document.querySelectorAll('.ripple');
                 const intro = document.getElementById('intro-box');
-                
                 const display = hasPickedUp ? 'none' : 'block';
                 hint.style.display = display;
                 ripples.forEach(r => r.style.display = display);
-                if(hasPickedUp) intro.style.display = 'none'; // 捡起后隐藏文字
-                
+                if(hasPickedUp) intro.style.display = 'none';
                 refreshState(val);
             });
         };
 
+        // ... 此处省略原有的 refreshState, handleNormalSend, createBubbleElement, animate 等物理引擎代码 ...
+        // (请保留你代码中 138行 之后的所有物理引擎及气泡生成函数)
+
         function refreshState(allMsgs) {
             bubbles.forEach(b => b.el.remove());
             bubbles = [];
-
             if (allMsgs) {
                 Object.values(allMsgs).forEach(msg => {
                     if (msg.type === 'clear_all') return;
@@ -200,25 +242,10 @@
             }
         }
 
-        function handleInitialPickup() {
-            if (hasPickedUp) return;
-
-            // 二次确认逻辑
-            if (confirm("Are you sure you want to pick up this memory?")) {
-                msgRef.push({ 
-                    mode: 'text', 
-                    text: "SOME ONE PICKED IT UP", 
-                    type: 'urgent',
-                    time: Date.now()
-                });
-            }
-        }
-
         function handleNormalSend() {
             const text = document.getElementById('msg-text').value;
             const file = document.getElementById('msg-img').files[0];
             if (!text && !file) return;
-
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -232,15 +259,6 @@
             document.getElementById('msg-text').value = '';
         }
 
-        function clearAll() {
-            if(confirm("Reset everything? This will return to stranger mode.")) {
-                msgRef.remove().then(() => {
-                    location.reload();
-                });
-            }
-        }
-
-        // --- 3. 物理引擎 ---
         function createPlusBubble() {
             const el = document.createElement('div');
             el.className = 'bubble is-plus'; el.innerHTML = '+';
@@ -274,15 +292,13 @@
             const initialX = ww/2 + (Math.random()-0.5)*150 - 60;
             const initialY = wh/2 + (Math.random()-0.5)*150 - 60;
             const bObj = { el, x: initialX, y: initialY, vx: 0, vy: 0, isDragged: false, data, isStatus };
-            
-            const start = (e) => { const t = e.touches ? e.touches[0] : e; draggedBubble = bObj; bObj.isDragged = true; };
+            const start = (e) => { bObj.isDragged = true; };
             const move = (e) => {
                 if (!bObj.isDragged) return;
                 const t = e.touches ? e.touches[0] : e;
                 bObj.x = t.clientX - 60; bObj.y = t.clientY - 60;
             };
-            const end = () => { bObj.isDragged = false; draggedBubble = null; };
-
+            const end = () => { bObj.isDragged = false; };
             el.addEventListener('mousedown', start);
             el.addEventListener('touchstart', start, {passive: false});
             window.addEventListener('mousemove', move);
@@ -302,19 +318,15 @@
                 if (i > 0) { px = bubbles[i-1].x + 60; py = bubbles[i-1].y + 60; }
                 const currX = b.x + 60, currY = b.y + 60;
                 const dx = currX - px, dy = currY - py, dist = Math.sqrt(dx*dx + dy*dy) || 1;
-                
                 if (dist > 300 && !b.isDragged) {
                     const pull = (dist - 300) * 0.02;
                     b.vx -= (dx / dist) * pull; b.vy -= (dy / dist) * pull;
                 }
-                
                 ctx.moveTo(px, py);
                 ctx.quadraticCurveTo((px + currX)/2, (py + currY)/2 + Math.sin(time*0.002+i)*5, currX, currY);
-                
                 if (!b.isDragged) {
                     const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
                     b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
-                    
                     bubbles.forEach((b2, j) => {
                         if(i === j) return;
                         const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
@@ -323,7 +335,6 @@
                             b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p;
                         }
                     });
-                    
                     if(cdist < 100) {
                         const p = (100 - cdist) * 0.05;
                         b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p;
