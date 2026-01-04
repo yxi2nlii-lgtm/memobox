@@ -264,11 +264,12 @@
                 const duration = Date.now() - startTime; 
                 const touch = e.changedTouches ? e.changedTouches[0] : e; 
                 const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY); 
-                if (duration < 250 && dist < 10) { 
-                    const dot = el.querySelector('.unread-dot'); 
-                    if(dot) dot.style.display = 'none'; 
-                    openModal(bObj); 
-                } 
+// 增加 duration 允许的时间，并放宽 dist 位移限制（从 10 像素改为 20 像素）
+if (duration < 350 && dist < 20) { 
+    const dot = el.querySelector('.unread-dot'); 
+    if(dot) dot.style.display = 'none'; 
+    openModal(bObj); 
+}
                 bObj.isDragged = false; draggedBubble = null; 
             };
             el.addEventListener('mousedown', startAction);
