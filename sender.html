@@ -10,7 +10,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        /* 保持原有样式不变 */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
         body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; touch-action: none; color: white; }
         #stage { position: absolute; inset: 0; z-index: 2500; pointer-events: none; }
@@ -35,11 +34,11 @@
         /* 气泡样式 */
         .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); cursor: grab; pointer-events: auto; opacity: 0; display: flex; align-items: center; justify-content: center; will-change: transform, opacity; z-index: 3000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .bubble.spawned { opacity: 1; transition: opacity 1s ease-out; }
-        .bubble.is-text { padding: 18px; font-size: 11px; color: #000000; text-align: center; line-height: 1.4; font-weight: 400; }
-        .bubble.is-status { background: #ffffff; border: none; color: #000000; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+        .bubble.is-text { padding: 18px; font-size: 11px; color: #000000 !important; text-align: center; line-height: 1.4; font-weight: 400; }
+        .bubble.is-status { background: #ffffff; border: none; color: #000000 !important; font-weight: 700; text-transform: uppercase; font-size: 10px; }
         .bubble.is-plus { border: 2px dashed rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); font-size: 32px; color: white; cursor: pointer; backdrop-filter: none; box-shadow: none; }
 
-        /* 新增：自定义弹窗 UI 样式 */
+        /* 自定义弹窗 UI */
         #confirm-layer { position: fixed; inset: 0; z-index: 20000; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; }
         .confirm-card { width: 85%; max-width: 320px; background: rgba(255,255,255,0.08); padding: 30px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
         .confirm-card h2 { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #fff; }
@@ -50,7 +49,7 @@
         .c-btn.confirm { background: #ffffff; color: #000; }
         .c-btn.danger { background: #ff3b30; color: white; }
 
-        /* 原有菜单 */
+        /* 菜单弹窗 */
         #menu-layer { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
         .menu-card { width: 85%; max-width: 350px; background: #222; padding: 25px; border-radius: 25px; border: 1px solid #333; }
         .input-box { margin-bottom: 15px; }
@@ -104,7 +103,7 @@
     </div>
 
     <script>
-        // --- 1. Firebase 配置 --- (保持不变)
+        // --- 1. Firebase 配置 ---
         const firebaseConfig = {
             apiKey: "AIzaSyC7OLP-hG6ekdLQewLrB9BFGQCuzRlbnTE",
             authDomain: "memo-6a74a.firebaseapp.com",
@@ -131,15 +130,10 @@
             const btn = document.getElementById('confirm-action-btn');
             document.getElementById('confirm-title').innerText = title;
             document.getElementById('confirm-msg').innerText = msg;
-            
             layer.style.display = 'flex';
             setTimeout(() => layer.style.opacity = '1', 10);
-
             btn.className = isDanger ? 'c-btn danger' : 'c-btn confirm';
-            btn.onclick = () => {
-                onConfirm();
-                hideConfirm();
-            };
+            btn.onclick = () => { onConfirm(); hideConfirm(); };
         }
 
         function hideConfirm() {
@@ -150,32 +144,18 @@
 
         function showPickupConfirm() {
             if (hasPickedUp) return;
-            showConfirm(
-                "Pick Up Memory?", 
-                "Are you sure you want to pick up this object and see its flow?", 
-                () => {
-                    msgRef.push({ 
-                        mode: 'text', 
-                        text: "SOME ONE PICKED IT UP", 
-                        type: 'urgent',
-                        time: Date.now()
-                    });
-                }
-            );
+            showConfirm("Pick Up Memory?", "Are you sure you want to pick up this object and see its flow?", () => {
+                msgRef.push({ mode: 'text', text: "SOME ONE PICKED IT UP", type: 'urgent', time: Date.now() });
+            });
         }
 
         function showResetConfirm() {
-            showConfirm(
-                "Reset System?", 
-                "This will clear all messages and return to stranger mode.", 
-                () => {
-                    msgRef.remove().then(() => location.reload());
-                },
-                true
-            );
+            showConfirm("Reset System?", "This will clear all messages and return to stranger mode.", () => {
+                msgRef.remove().then(() => location.reload());
+            }, true);
         }
 
-        // --- 3. 核心业务逻辑 (整合原有逻辑) ---
+        // --- 3. 核心业务逻辑 ---
         window.onload = function() {
             configRef.on('value', (snapshot) => {
                 const data = snapshot.val();
@@ -190,12 +170,8 @@
                     const desc = data.userDesc || data.desc || "";
                     nameEl.innerText = `Hi stranger, this is ${name}`;
                     descEl.innerText = desc ? `“${desc}”` : "";
-                    if (hasPickedUp) {
-                        document.getElementById('intro-box').style.display = 'none';
-                    } else {
-                        nameEl.style.opacity = 1;
-                        descEl.style.opacity = 1;
-                    }
+                    if (hasPickedUp) { document.getElementById('intro-box').style.display = 'none'; }
+                    else { nameEl.style.opacity = 1; descEl.style.opacity = 1; }
                 }
             });
 
@@ -205,9 +181,7 @@
                 const val = snapshot.val();
                 let foundPickup = false;
                 if (val) {
-                    Object.values(val).forEach(m => {
-                        if (m.text === "SOME ONE PICKED IT UP") foundPickup = true;
-                    });
+                    Object.values(val).forEach(m => { if (m.text === "SOME ONE PICKED IT UP") foundPickup = true; });
                 }
                 hasPickedUp = foundPickup;
                 const hint = document.getElementById('status-hint');
@@ -221,18 +195,14 @@
             });
         };
 
-        // ... 此处省略原有的 refreshState, handleNormalSend, createBubbleElement, animate 等物理引擎代码 ...
-        // (请保留你代码中 138行 之后的所有物理引擎及气泡生成函数)
-
         function refreshState(allMsgs) {
             bubbles.forEach(b => b.el.remove());
             bubbles = [];
             if (allMsgs) {
                 Object.values(allMsgs).forEach(msg => {
                     if (msg.type === 'clear_all') return;
-                    if (msg.mode === 'img') {
-                        createCustomPhotoBubble(msg.img, msg.text);
-                    } else {
+                    if (msg.mode === 'img') { createCustomPhotoBubble(msg.img, msg.text); } 
+                    else {
                         let content = msg.text;
                         if (content === "SOME ONE PICKED IT UP") content = "I PICKED IT UP";
                         createBubbleElement({ type: 'text', content: content }, msg.type === 'urgent');
@@ -248,9 +218,7 @@
             if (!text && !file) return;
             if (file) {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    msgRef.push({ mode: 'img', img: e.target.result, text, type: 'normal', time: Date.now() });
-                };
+                reader.onload = (e) => { msgRef.push({ mode: 'img', img: e.target.result, text, type: 'normal', time: Date.now() }); };
                 reader.readAsDataURL(file);
             } else {
                 msgRef.push({ mode: 'text', text, type: 'normal', time: Date.now() });
@@ -311,10 +279,15 @@
         function animate(time) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const ww = window.innerWidth, wh = window.innerHeight, cx = ww / 2, cy = wh / 2;
+            
+            // 连线起点设定在头像中心 (cy - 20)
+            const startX = cx;
+            const startY = cy - 20;
+
             ctx.beginPath();
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
             bubbles.forEach((b, i) => {
-                let px = cx, py = cy;
+                let px = startX, py = startY;
                 if (i > 0) { px = bubbles[i-1].x + 60; py = bubbles[i-1].y + 60; }
                 const currX = b.x + 60, currY = b.y + 60;
                 const dx = currX - px, dy = currY - py, dist = Math.sqrt(dx*dx + dy*dy) || 1;
@@ -330,15 +303,9 @@
                     bubbles.forEach((b2, j) => {
                         if(i === j) return;
                         const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
-                        if(pdist < 135) {
-                            const p = (135 - pdist) * 0.02;
-                            b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p;
-                        }
+                        if(pdist < 135) { const p = (135 - pdist) * 0.02; b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p; }
                     });
-                    if(cdist < 100) {
-                        const p = (100 - cdist) * 0.05;
-                        b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p;
-                    }
+                    if(cdist < 100) { const p = (100 - cdist) * 0.05; b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p; }
                     b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
                 }
                 b.x = Math.max(0, Math.min(ww - 120, b.x));
