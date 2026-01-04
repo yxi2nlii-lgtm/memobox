@@ -1,0 +1,178 @@
+# 
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Lucky Bamboo - Full Interaction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,700;1,700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+	* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+        
+        :root {
+            --axis-left: 77.5px; /* [标记：轴线位置] 统一控制时间轴偏离左侧的距离 */
+        }
+
+        body { background-color: #f2f2f2; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; min-height: 100vh; }
+        .app-view { width: 100%; max-width: 390px; background-color: #fff; position: relative; min-height: 100vh; }
+        
+        /* [标记：背景模糊] 控制弹窗弹出时，背景内容的虚化程度 */
+        .content-wrapper { padding: 40px 24px; display: flex; flex-direction: column; transition: filter 0.4s ease; position: relative; }
+        body.modal-open .content-wrapper { filter: blur(12px); pointer-events: none; }
+
+        .image-container { 
+            width: 300px; height: 300px; border-radius: 50%; overflow: hidden; 
+            margin: 0 auto; cursor: pointer; z-index: 2;
+        }
+        .image-container img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* [标记：死锁引导线] 图片下方连接标题的那根 1px 黑线 */
+        .top-lead-line { 
+            position: absolute; width: 1px; background: #000; 
+            left: calc(24px + var(--axis-left)); 
+            top: 343px; 
+            height: 102px; 
+            z-index: 1;
+        }
+
+        .title { 
+            font-family: 'Bodoni Moda', serif; font-size: 32px; font-weight: 700; 
+            position: absolute; top: 385px; width: 100%; text-align: center;
+            z-index: 5; pointer-events: none;
+        }
+
+        /* [标记：主时间轴线] 背景那根贯穿上下的细黑竖线 */
+        .timeline-container { width: 100%; position: relative; margin-top: 108px; }
+        .full-track-line { position: absolute; left: var(--axis-left); top: 0; bottom: 20px; width: 1px; background: #000; z-index: 1; }
+        .timeline-list { position: relative; z-index: 2; }
+        .timeline-item { display: flex; width: 100%; position: relative; }
+        .date-side { width: 65px; flex-shrink: 0; text-align: right; padding-right: 15px; font-size: 10px; color: rgba(0,0,0,0.3); font-weight: 600; padding-top: 2px; }
+        .axis-side { width: 25px; flex-shrink: 0; display: flex; justify-content: center; position: relative; }
+        .dot { width: 7px; height: 7px; background: #000; border-radius: 50%; box-shadow: 0 0 0 4px #fff; z-index: 3; }
+        .content-side { flex: 1; padding-left: 10px; padding-bottom: 25px; font-size: 14px; line-height: 1.4; color: #1a1a1a; }
+        
+        /* [标记：视觉遮罩] 重点！这块白色区域挡住了黑线末端，实现线在最后一个点截断的效果 */
+        .bottom-mask { position: absolute; top: 11px; bottom: -500px; width: 10px; background: #fff; z-index: 2; }
+
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; justify-content: center; align-items: center; z-index: 100; background: rgba(255,255,255,0.2); }
+        .modal-overlay.active { display: flex; }
+        .tan { background: #ffb3a8; border-radius: 30px; width: 280px; padding: 40px 0; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .status-icon { width: 85px; height: 85px; object-fit: contain; }
+        .modal-text { padding: 0 30px; font-size: 15px; line-height: 1.45; text-align: left; color: #000; }
+        
+        .button-row { display: flex; gap: 12px; }
+        .btn-finger { background: #000; border-radius: 16px; width: 62px; height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+        .btn-ok { background: #000; border-radius: 16px; width: 130px; height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; }
+        .btn-ok span { color: #fff; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; }
+        .finger-img { width: 22px; height: 22px; pointer-events: none; }
+    </style>
+</head>
+<body id="bodyTag">
+
+    <div class="app-view">
+        <div class="content-wrapper" id="contentWrapper">
+            <div class="image-container" onclick="openModal()">
+                <img src="image-10.png" alt="Bamboo">
+            </div>
+            
+            <div class="top-lead-line"></div>
+            <h1 class="title">lucky bamboo</h1>
+
+            <div class="timeline-container">
+                <div class="full-track-line" id="mainLine"></div>
+                <div id="timelineList" class="timeline-list">
+                    <div class="timeline-item">
+                        <div class="date-side"><div class="date-text">DEC, 12<br>2027</div></div>
+                        <div class="axis-side">
+                            <div class="dot"></div>
+                            <div class="bottom-mask"></div>
+                        </div>
+                        <div class="content-side">
+                            Bought when I first arrived in Delft. it stayed with me for two years, growing alongside me.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="tan">
+                <img class="status-icon" src="group-75510.svg" />
+                <div class="modal-text">Someone <b>picked up</b> your lucky bamboo. It’s now part of someone else’s day!</div>
+                <div class="button-row">
+                    <button class="btn-finger" onclick="toggleFinger()">
+                        <img id="finger" class="finger-img" src="finger-default.svg" />
+                    </button>
+                    <button class="btn-ok" onclick="handleOk()">
+                        <span>CONTINUE</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('modalOverlay');
+        const body = document.getElementById('bodyTag');
+        const timelineList = document.getElementById('timelineList');
+        let hasUpdated = false;
+
+        // [逻辑：执行开启弹窗]
+        function openModal() {
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+            body.classList.add('modal-open');
+        }
+
+        // [逻辑：切换指纹图标样式]
+        function toggleFinger() {
+            const img = document.getElementById('finger');
+            if (img.src.includes('default')) {
+                img.src = 'finger-active.svg';
+            } else {
+                img.src = 'finger-default.svg';
+            }
+        }
+
+        // [逻辑：处理确定点击，关闭弹窗并触发内容新增]
+        function handleOk() {
+            modal.classList.remove('active');
+            body.classList.remove('modal-open');
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+                if (!hasUpdated) {
+                    addNewTimelineItem(); // 触发新增条目
+                    hasUpdated = true;
+                }
+                document.getElementById('finger').src = 'finger-default.svg';
+            }, 300);
+        }
+
+        // [核心：动态生成新时间轴节点]
+        function addNewTimelineItem() {
+            // 1. 移除上一个条目的遮罩，让黑线能漏出来向下走
+            const oldMask = timelineList.querySelector('.bottom-mask');
+            if (oldMask) oldMask.remove();
+
+            // 2. 创建新元素并填入内容
+            const newItem = document.createElement('div');
+            newItem.className = 'timeline-item';
+            newItem.innerHTML = `
+                <div class="date-side"><div class="date-text">DEC, 20<br>2027</div></div>
+                <div class="axis-side">
+                    <div class="dot"></div>
+                    <div class="bottom-mask"></div>
+                </div>
+                <div class="content-side">Someone picked up your lucky bamboo.</div>
+            `;
+            
+            // 3. 挂载到列表中
+            timelineList.appendChild(newItem);
+
+            // 4. 修改主轴高度，确保视觉上的延续
+            document.getElementById('mainLine').style.bottom = '20px';
+        }
+    </script>
+</body>
+</html>
