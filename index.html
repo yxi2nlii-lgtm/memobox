@@ -113,14 +113,26 @@
         });
 
         // --- 3. 监听泡泡消息 ---
+       // 1. 先定义页面启动时间
+        const pageStartTime = Date.now();
+
+        // 2. 修改后的监听逻辑
         msgRef.limitToLast(15).on('child_added', (snapshot) => {
             const data = snapshot.val();
-            if (data.type === 'clear_all') { location.reload(); return; }
+            
+            // 修复无限刷新的核心判断
+            if (data.type === 'clear_all') { 
+                // 只有当“重置信号”的时间晚于“页面打开”的时间，才刷新
+                if (data.time && data.time > pageStartTime) {
+                    location.reload(); 
+                }
+                return; 
+            }
             
             document.body.classList.remove('state-hero');
             if (data.mode === 'img') {
                 createCustomPhotoBubble(data.img, data.text || "");
-            } else {
+            } else if (data.text) {
                 createBubbleElement({ type: 'text', content: data.text }, data.type === 'urgent');
             }
         });
@@ -220,7 +232,17 @@
         }
 
         function initPhysics() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; animate(0); }
-        function handleHardReset() { configRef.remove(); msgRef.set({ reset: Date.now() }); location.reload(); }
+function handleHardReset() {
+            if(confirm("确定要重置所有数据吗？")) {
+                configRef.remove();
+                // 关键：发送 clear_all 时带上当前时间戳 time
+                msgRef.push({ 
+                    type: 'clear_all', 
+                    time: Date.now() 
+                }); 
+                location.reload();
+            }
+        }
         window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     </script>
 </body>
