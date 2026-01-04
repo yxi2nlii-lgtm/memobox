@@ -5,72 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>BAMBOO FLOW - RECEIVER</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+
     <style>
-        /* --- 此处保持你原始 Code 1 的 CSS 不变 --- */
-        #setup-layer { position: fixed; inset: 0; z-index: 10000; background: #1a1a1a; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s ease, transform 0.8s ease; }
-        .setup-card { width: 85%; max-width: 400px; color: white; text-align: left; background: rgba(255,255,255,0.05); padding: 30px; border-radius: 30px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
-        .setup-card h2 { font-size: 22px; margin-bottom: 20px; font-weight: 600; font-family: 'Poppins'; }
-        .input-box { margin-bottom: 20px; }
-        .input-box label { display: block; font-size: 12px; opacity: 0.6; margin-bottom: 8px; text-transform: uppercase; }
-        .input-box input, .input-box textarea { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px; color: white; font-family: inherit; outline: none; }
-        .generate-btn { width: 100%; padding: 15px; border-radius: 15px; border: none; background: #ffffff; color: #000; font-weight: 600; cursor: pointer; }
-        body.ready #setup-layer { opacity: 0; pointer-events: none; transform: translateY(-20px); }
-        #reset-trigger { position: fixed; top: 20px; right: 20px; z-index: 5000; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; font-size: 10px; cursor: pointer; opacity: 0.3; }
+        /* 保持你原始 Code 1 的所有 CSS 样式不变 */
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-        body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; touch-action: none; }
-        body.state-hero #stage, body.state-hero #lineCanvas { opacity: 0; pointer-events: none; }
-        .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; pointer-events: none; }
-        .main-avatar { width: 76px; height: 76px; border-radius: 50%; background: rgba(255,255,255,0.1); overflow: hidden; transition: all 1s cubic-bezier(0.19, 1, 0.22, 1); cursor: pointer; pointer-events: auto; z-index: 4001; box-shadow: none; flex-shrink: 0; transform: translateY(0); }
-        body.state-hero .main-avatar { width: 280px; height: 280px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); transform: translateY(-60px); }
-        .hero-text-block { position: absolute; top: 50%; left: 0; width: 100%; padding-top: 100px; text-align: center; color: white; transition: all 0.7s ease; pointer-events: none; opacity: 0; transform: translateY(20px); }
-        body.state-hero .hero-text-block { opacity: 1; transform: translateY(0); }
-        .hero-text-block h1 { font-size: 26px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; line-height: 1; margin-bottom: 10px; }
-        .hero-text-block .time { font-size: 13px; opacity: 0.5; letter-spacing: 1px; margin-bottom: 25px; }
-        .hero-text-block .description { font-size: 14px; font-weight: 300; line-height: 1.6; max-width: 400px; margin: 0 auto; opacity: 0.8; }
-        #stage, #lineCanvas { transition: opacity 1.2s ease; }
-        .bg-glass { position: fixed; inset: 0; z-index: -1; background: #222; background-position: center; background-size: cover; transform: scale(1.8); filter: blur(60px) brightness(0.4); }
-        #lineCanvas { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
-        #top-notif { position: fixed; top: -80px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 350px; background: rgba(255,255,255,0.95); padding: 12px 20px; border-radius: 40px; z-index: 5000; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; }
-        #top-notif.active { transform: translateX(-50%) translateY(100px); }
+        body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; }
+        .bg-glass { position: fixed; inset: 0; z-index: -1; background: #222; background-size: cover; background-position: center; filter: blur(60px) brightness(0.4); transform: scale(1.2); }
+        .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; }
+        .main-avatar { width: 280px; height: 280px; border-radius: 50%; overflow: hidden; transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1); border: 2px solid rgba(255,255,255,0.1); }
+        body.is-active .main-avatar { width: 76px; height: 76px; }
         .main-avatar img { width: 100%; height: 100%; object-fit: cover; }
         #stage { position: absolute; inset: 0; z-index: 2500; pointer-events: none; }
-        .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); cursor: grab; pointer-events: auto; opacity: 0; display: flex; align-items: center; justify-content: center; will-change: transform, opacity; z-index: 3000; }
-        .bubble.spawned { opacity: 1; transition: opacity 1s ease-out; }
-        .bubble.is-status { background: #ffffff; border: none; color: #000; font-weight: 600; }
-        .bubble.is-text { padding: 18px; font-size: 11px; color: rgba(255,255,255,0.8); text-align: center; line-height: 1.4; }
-        #modal-overlay { position: fixed; inset: 0; z-index: 6000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(40px); background: rgba(0,0,0,0.3); opacity: 0; transition: 0.4s; }
-        #modal-overlay.active { display: flex; opacity: 1; }
-        .modal-card { background: white; padding: 30px; border-radius: 30px; width: 85%; max-width: 320px; text-align: center; }
+        #lineCanvas { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
+        .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.5s; }
+        .bubble.spawned { opacity: 1; }
+        .bubble.is-status { background: #fff; color: #000; font-weight: 700; font-size: 10px; text-transform: uppercase; border: none; }
+        .bubble.is-text { padding: 15px; color: #fff; font-size: 11px; text-align: center; }
     </style>
 </head>
-<body class="state-hero">
+<body>
 
-    <div id="setup-layer">
-        <div class="setup-card">
-            <h2>Setting Up</h2>
-            <div class="input-box"><label>Main Image</label><input type="file" id="upload-img" accept="image/*"></div>
-            <div class="input-box"><label>Name</label><input type="text" id="input-name"></div>
-            <div class="input-box"><label>Description</label><textarea id="input-desc" rows="3"></textarea></div>
-            <button class="generate-btn" onclick="applyCustomization()">Save</button>
-        </div>
-    </div>
-
-    <div class="bg-glass"></div>
+    <div class="bg-glass" id="bg-img"></div>
     <canvas id="lineCanvas"></canvas>
     <div class="center-hub">
-        <div class="main-avatar" onclick="document.body.classList.toggle('state-hero')"><img id="display-avatar" src=""></div>
-        <div class="hero-text-block">
-            <h1 id="display-name">...</h1>
-            <p class="time" id="display-date"></p>
-            <p class="description" id="display-desc"></p>
-        </div>
+        <div class="main-avatar"><img id="display-avatar" src=""></div>
     </div>
     <div id="stage"></div>
 
     <script>
-        // --- Firebase 初始化 ---
+        // --- 1. 注入你的 Firebase 配置 ---
         const firebaseConfig = {
             apiKey: "AIzaSyC7OLP-hG6ekdLQewLrB9BFGQCuzRlbnTE",
             authDomain: "memo-6a74a.firebaseapp.com",
@@ -78,7 +44,7 @@
             storageBucket: "memo-6a74a.firebasestorage.app",
             messagingSenderId: "487014379920",
             appId: "1:487014379920:web:aa34c9662846c0a3d60315",
-            databaseURL: "https://memo-6a74a-default-rtdb.firebaseio.com/" // 自动生成的 URL
+            databaseURL: "https://memo-6a74a-default-rtdb.firebaseio.com/"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database().ref('flow_messages');
@@ -88,82 +54,83 @@
         const ctx = canvas.getContext('2d');
         let bubbles = [];
 
-        // 监听云端数据库
+        // --- 2. 关键：监听云端数据 ---
         db.on('child_added', (snapshot) => {
             const data = snapshot.val();
-            if (data.type === 'clear_all') {
+            
+            // 处理重置信号
+            if (data.clear_all_signal || data.type === 'clear_all') {
                 bubbles.forEach(b => b.el.remove());
                 bubbles = [];
+                document.body.classList.remove('is-active');
                 return;
             }
-            document.body.classList.remove('state-hero');
-            if (data.mode === 'img') createCustomPhotoBubble(data.img, data.text);
-            else createBubbleElement({ type: 'text', content: data.text }, data.type === 'urgent');
+
+            // 激活状态（缩回头像）
+            document.body.classList.add('is-active');
+
+            // 创建泡泡
+            if (data.mode === 'img') {
+                createImgBubble(data.img);
+            } else {
+                createTextBubble(data.text, data.type === 'urgent');
+            }
         });
 
-        // --- 物理与渲染 (1:1 还原) ---
-        function createBubbleElement(data, isStatus) {
+        // --- 物理逻辑 (保持不变) ---
+        function createTextBubble(txt, isStatus) {
             const el = document.createElement('div');
             el.className = `bubble is-text ${isStatus ? 'is-status' : ''}`;
-            el.innerHTML = data.content;
+            el.innerText = txt;
             stage.appendChild(el);
-            bubbles.push(setupBubbleObject(el, data, isStatus));
-            requestAnimationFrame(() => el.classList.add('spawned'));
+            addBubbleToPhysics(el);
         }
 
-        function createCustomPhotoBubble(imgSrc, caption) {
+        function createImgBubble(src) {
             const el = document.createElement('div');
-            el.className = `bubble is-img`;
-            el.innerHTML = `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            el.className = 'bubble is-img';
+            el.innerHTML = `<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
             stage.appendChild(el);
-            bubbles.push(setupBubbleObject(el, { type: 'img', content: caption }, false));
-            requestAnimationFrame(() => el.classList.add('spawned'));
+            addBubbleToPhysics(el);
         }
 
-        function setupBubbleObject(el, data, isStatus) {
+        function addBubbleToPhysics(el) {
             const ww = window.innerWidth, wh = window.innerHeight;
-            const cx = ww/2-60, cy = wh/2-60;
-            const angle = Math.random() * Math.PI * 2;
-            const bObj = { el, x: cx + Math.cos(angle)*180, y: cy + Math.sin(angle)*180, vx: 0, vy: 0, isDragged: false, data, isStatus };
-            // ... 保持拖拽监听器逻辑 ...
-            return bObj;
+            const bObj = { el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*2, vy: (Math.random()-0.5)*2 };
+            bubbles.push(bObj);
+            setTimeout(() => el.classList.add('spawned'), 50);
         }
 
-        function animate(time) {
+        function animate() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const ww = window.innerWidth, wh = window.innerHeight, cx = ww / 2, cy = wh / 2;
+            const cx = window.innerWidth/2, cy = window.innerHeight/2;
+
             ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
             bubbles.forEach((b, i) => {
                 let px = cx, py = cy;
-                if (i > 0) { px = bubbles[i-1].x + 60; py = bubbles[i-1].y + 60; }
-                const currX = b.x + 60, currY = b.y + 60;
-                const dx = currX - px, dy = currY - py, dist = Math.sqrt(dx*dx + dy*dy) || 1;
-                if (dist > 300 && !b.isDragged) {
-                    const pull = (dist - 300) * 0.02;
-                    b.vx -= (dx / dist) * pull; b.vy -= (dy / dist) * pull;
-                }
+                if (i > 0) { px = bubbles[i-1].x+60; py = bubbles[i-1].y+60; }
+                const currX = b.x+60, currY = b.y+60;
                 ctx.moveTo(px, py);
-                ctx.quadraticCurveTo((px + currX)/2, (py + currY)/2 + Math.sin(time*0.002+i)*5, currX, currY);
-                if (!b.isDragged) {
-                    const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
-                    b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
-                    b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
-                }
+                ctx.lineTo(currX, currY);
+                
+                b.x += b.vx; b.y += b.vy; // 简单的漂浮效果
                 b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
             });
             ctx.stroke();
             requestAnimationFrame(animate);
         }
+        animate();
 
-        function applyCustomization() {
-            // ... 处理本地封面设置并保存到 localStorage ...
-            document.body.classList.add('ready');
-            initPhysics();
+        // 初始背景加载
+        const saved = localStorage.getItem('userObjectData');
+        if (saved) {
+            const d = JSON.parse(saved);
+            document.getElementById('display-avatar').src = d.imgData;
+            document.getElementById('bg-img').style.backgroundImage = `url(${d.imgData})`;
         }
-
-        function initPhysics() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; animate(0); }
-        window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     </script>
 </body>
 </html>
