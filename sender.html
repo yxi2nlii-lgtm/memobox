@@ -3,108 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BAMBOO FLOW - DYNAMIC CENTER</title>
+    <title>BAMBOO FLOW - SENDER</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        /* --- 样式完全保留，一字未动 --- */
-        #setup-layer { position: fixed; inset: 0; z-index: 10000; background: #1a1a1a; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s ease, transform 0.8s ease; }
-        .setup-card { width: 85%; max-width: 400px; color: white; text-align: left; background: rgba(255,255,255,0.05); padding: 30px; border-radius: 30px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
-        .setup-card h2 { font-size: 22px; margin-bottom: 20px; font-weight: 600; font-family: 'Poppins'; }
-        .input-box { margin-bottom: 20px; }
-        .input-box label { display: block; font-size: 12px; opacity: 0.6; margin-bottom: 8px; text-transform: uppercase; }
-        .input-box input, .input-box textarea { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px; color: white; font-family: inherit; outline: none; }
-        .generate-btn { width: 100%; padding: 15px; border-radius: 15px; border: none; background: #ffffff; color: #000; font-weight: 600; cursor: pointer; }
-        body.ready #setup-layer { opacity: 0; pointer-events: none; transform: translateY(-20px); }
-        #reset-trigger { position: fixed; top: 20px; right: 20px; z-index: 5000; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; font-size: 10px; cursor: pointer; opacity: 0.3; }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-        body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; touch-action: none; }
-        body.state-hero #stage, body.state-hero #lineCanvas { opacity: 0; pointer-events: none; }
-        .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; pointer-events: none; }
-        .main-avatar { width: 76px; height: 76px; border-radius: 50%; background: rgba(255,255,255,0.1); overflow: hidden; transition: all 1s cubic-bezier(0.19, 1, 0.22, 1); cursor: pointer; pointer-events: auto; z-index: 4001; box-shadow: none; flex-shrink: 0; transform: translateY(0); }
-        body.state-hero .main-avatar { width: 280px; height: 280px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); transform: translateY(-60px); }
-        .hero-text-block { position: absolute; top: 50%; left: 0; width: 100%; padding-top: 100px; text-align: center; color: white; transition: all 0.7s ease; pointer-events: none; opacity: 0; transform: translateY(20px); }
-        body.state-hero .hero-text-block { opacity: 1; transform: translateY(0); }
-        .hero-text-block h1 { font-size: 26px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; line-height: 1; margin-bottom: 10px; }
-        .hero-text-block .time { font-size: 13px; opacity: 0.5; letter-spacing: 1px; margin-bottom: 25px; }
-        .hero-text-block .description { font-size: 14px; font-weight: 300; line-height: 1.6; max-width: 400px; margin: 0 auto; opacity: 0.8; }
-        #stage, #lineCanvas { transition: opacity 1.2s ease; }
-        .bg-glass { position: fixed; inset: 0; z-index: -1; background: #222; background-position: center; background-size: cover; transform: scale(1.8); filter: blur(60px) brightness(0.4); }
-        #lineCanvas { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
-        #top-notif { position: fixed; top: -80px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 350px; background: rgba(255,255,255,0.95); padding: 12px 20px; border-radius: 40px; z-index: 5000; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; }
-        #top-notif.active { transform: translateX(-50%) translateY(100px); }
-        .main-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; touch-action: none; color: white; }
         #stage { position: absolute; inset: 0; z-index: 2500; pointer-events: none; }
+        #lineCanvas { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
+        .bg-glass { position: fixed; inset: 0; z-index: -1; background: #222; background-position: center; background-size: cover; transform: scale(1.8); filter: blur(60px) brightness(0.4); }
+        
+        /* 介绍区域样式 */
+        .intro-container { position: fixed; top: 22%; width: 100%; text-align: center; z-index: 4000; pointer-events: none; padding: 0 40px; }
+        #display-name { font-size: 18px; font-weight: 600; margin-bottom: 8px; opacity: 0; transition: opacity 1s; }
+        #display-desc { font-size: 11px; opacity: 0; transition: opacity 1s 0.5s; line-height: 1.6; color: rgba(255,255,255,0.6); }
+
+        .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; pointer-events: none; }
+        .main-avatar { width: 84px; height: 84px; border-radius: 50%; background: rgba(255,255,255,0.1); overflow: hidden; z-index: 4001; pointer-events: auto; cursor: pointer; transition: transform 0.3s ease; border: 2px solid rgba(255,255,255,0.2); }
+        .main-avatar:active { transform: scale(0.9); }
+        .main-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        
+        #status-hint { margin-top: 20px; font-size: 9px; letter-spacing: 2px; opacity: 0.5; animation: blink 2s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.7; } }
+
         .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); cursor: grab; pointer-events: auto; opacity: 0; display: flex; align-items: center; justify-content: center; will-change: transform, opacity; z-index: 3000; }
-        .bubble > * { pointer-events: none; }
         .bubble.spawned { opacity: 1; transition: opacity 1s ease-out; }
-        .bubble.is-status { background: #ffffff; border: none; color: #000; font-weight: 600; }
         .bubble.is-text { padding: 18px; font-size: 11px; color: rgba(255,255,255,0.8); text-align: center; line-height: 1.4; }
-        .is-status.is-text { color: #000; }
-        .photo-placeholder { width: 32px; height: 32px; fill: rgba(255,255,255,0.4); }
-        .unread-dot { position: absolute; top: 18px; right: 18px; width: 8px; height: 8px; background: #ff3b30; border-radius: 50%; }
-        #modal-overlay { position: fixed; inset: 0; z-index: 6000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); background: rgba(0,0,0,0.3); opacity: 0; transition: 0.4s; }
-        #modal-overlay.active { display: flex; opacity: 1; }
-        .modal-card { background: white; padding: 30px; border-radius: 30px; width: 85%; max-width: 320px; text-align: center; position: relative; }
-        .placeholder-big { width: 100%; height: 150px; background: #f0f0f0; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
-        .modal-actions { display: flex; justify-content: center; gap: 40px; margin-top: 10px; border-top: 1px solid #eee; padding-top: 20px; }
-        .btn-icon { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; outline: none; }
-        .btn-icon svg { stroke: #999; fill: none; transition: 0.3s; }
-        .btn-icon.liked svg { stroke: #ff3b30; fill: #ff3b30; }
-        #comment-area { display: none; margin-top: 15px; animation: fadeIn 0.3s ease; }
-        .input-group { display: flex; background: #f5f5f7; border-radius: 12px; padding: 8px 12px; align-items: center; }
-        .input-group input { flex: 1; background: none; border: none; outline: none; font-size: 13px; font-family: inherit; }
-        .input-group button { background: none; border: none; color: #007AFF; font-weight: 600; font-size: 13px; cursor: pointer; margin-left: 10px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        #hidden-trigger { position: fixed; bottom: 0; left: 0; width: 100%; height: 12%; z-index: 2000; cursor: pointer; }
+        .bubble.is-status { background: #ffffff; border: none; color: #000; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+        .bubble.is-plus { border: 2px dashed rgba(255,255,255,0.4); background: none; font-size: 32px; color: white; cursor: pointer; backdrop-filter: none; }
+
+        #menu-layer { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
+        .menu-card { width: 85%; max-width: 350px; background: #222; padding: 25px; border-radius: 25px; border: 1px solid #333; }
+        .input-box { margin-bottom: 15px; }
+        .input-box label { display: block; font-size: 10px; opacity: 0.5; margin-bottom: 5px; }
+        .input-box input, .input-box textarea { width: 100%; background: #333; border: none; border-radius: 10px; padding: 12px; color: white; outline: none; font-family: inherit; }
+        .send-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: white; font-weight: 600; cursor: pointer; }
+        
+        #reset-btn { position: fixed; top: 40px; right: 20px; z-index: 5000; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 20px; font-size: 9px; cursor: pointer; }
     </style>
 </head>
-<body class="state-hero">
+<body>
 
-    <div id="setup-layer">
-        <div class="setup-card">
-            <h2>Initialize Object</h2>
-            <div class="input-box"><label>Main Image</label><input type="file" id="upload-img" accept="image/*"></div>
-            <div class="input-box"><label>Name</label><input type="text" id="input-name" placeholder="e.g. My Lucky Bamboo"></div>
-            <div class="input-box"><label>Description</label><textarea id="input-desc" rows="3" placeholder="Tell the story..."></textarea></div>
-            <button class="generate-btn" onclick="applyCustomization()">Save to Cloud</button>
-        </div>
-    </div>
-
-    <button id="reset-trigger" onclick="handleHardReset()">RESET ALL</button>
-    <div id="top-notif"><div style="width: 8px; height: 8px; background: #ff3b30; border-radius: 50%;"></div><span id="notif-text" style="font-size: 12px; color: #333;"></span></div>
-    <div class="bg-glass"></div>
+    <div class="bg-glass" id="bg-img"></div>
     <canvas id="lineCanvas"></canvas>
-    <div id="hidden-trigger"></div>
+    
+    <button id="reset-btn" onclick="clearAll()">RESET SYSTEM</button>
 
-    <div id="modal-overlay" onclick="closeModal()">
-        <div class="modal-card" onclick="event.stopPropagation()">
-            <div id="m-visual"></div>
-            <p id="m-text" style="color: #333; font-size: 14px; line-height: 1.5; margin-bottom: 10px;"></p>
-            <div id="comment-list"></div>
-            <div class="modal-actions">
-                <button class="btn-icon" id="btn-like" onclick="toggleLike()"><svg width="22" height="22" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78l1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
-                <button class="btn-icon" onclick="toggleCommentBox()"><svg width="22" height="22" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></button>
-            </div>
-            <div id="comment-area"><div class="input-group"><input type="text" id="comment-input" placeholder="Comment..."><button onclick="postComment()">Post</button></div></div>
-        </div>
+    <div class="intro-container">
+        <h2 id="display-name">Hi stranger...</h2>
+        <p id="display-desc"></p>
     </div>
 
     <div class="center-hub">
-        <div class="main-avatar" onclick="document.body.classList.toggle('state-hero')"><img id="display-avatar" src=""></div>
-        <div class="hero-text-block">
-            <h1 id="display-name">LOADING...</h1>
-            <p class="time" id="display-date"></p>
-            <p class="description" id="display-desc"></p>
+        <div class="main-avatar" onclick="handleInitialPickup()">
+            <img id="display-avatar" src="">
         </div>
+        <div id="status-hint">CLICK TO PICK IT UP</div>
     </div>
+
     <div id="stage"></div>
 
+    <div id="menu-layer" onclick="this.style.display='none'">
+        <div class="menu-card" onclick="event.stopPropagation()">
+            <div class="input-box"><label>MESSAGE / CAPTION</label><textarea id="msg-text" rows="3"></textarea></div>
+            <div class="input-box"><label>ADD PHOTO (OPTIONAL)</label><input type="file" id="msg-img" accept="image/*"></div>
+            <button class="send-btn" onclick="handleNormalSend()">SEND INTO FLOW</button>
+        </div>
+    </div>
+
     <script>
-        // --- 1. Firebase 配置 (接入) ---
+        // --- 1. Firebase 配置 ---
         const firebaseConfig = {
             apiKey: "AIzaSyC7OLP-hG6ekdLQewLrB9BFGQCuzRlbnTE",
             authDomain: "memo-6a74a.firebaseapp.com",
@@ -124,109 +95,152 @@
         const ctx = canvas.getContext('2d');
         let bubbles = [];
         let draggedBubble = null;
-        const pageStartTime = Date.now();
-        const svgIcon = `<svg class="photo-placeholder" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
+        let hasPickedUp = false;
 
-        // --- 2. 自动同步云端配置 (名字和图片) ---
-        configRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                injectData(data);
-                document.body.classList.add('ready');
-                if (bubbles.length === 0) { initPhysics(); }
-            }
-        });
+        // --- 2. 核心逻辑 ---
+        window.onload = function() {
+            // 读取名字、描述、头像
+            configRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    document.getElementById('display-avatar').src = data.imgData || '';
+                    document.getElementById('bg-img').style.backgroundImage = `url(${data.imgData})`;
+                    const nameEl = document.getElementById('display-name');
+                    const descEl = document.getElementById('display-desc');
+                    nameEl.innerText = `Hi stranger, this is ${data.userName || 'Someone'}`;
+                    descEl.innerText = data.userDesc || '';
+                    nameEl.style.opacity = 1;
+                    descEl.style.opacity = 1;
+                }
+            });
 
-        // --- 3. 监听泡泡消息 (带时间校验防止刷新死循环) ---
-        msgRef.limitToLast(15).on('child_added', (snapshot) => {
-            const data = snapshot.val();
-            if (data.type === 'clear_all') {
-                if (data.time && data.time > pageStartTime) location.reload();
-                return;
+            initPhysics();
+
+            // 监听消息同步
+            msgRef.on('value', (snapshot) => {
+                const val = snapshot.val();
+                // 检查是否已经捡起 (寻找特定的拾取消息)
+                hasPickedUp = false;
+                if (val) {
+                    Object.values(val).forEach(m => {
+                        if (m.text === "SOME ONE PICKED IT UP") hasPickedUp = true;
+                    });
+                }
+                
+                // 状态 UI 切换
+                document.getElementById('status-hint').style.display = hasPickedUp ? 'none' : 'block';
+                refreshState(val);
+            });
+        };
+
+        function refreshState(allMsgs) {
+            bubbles.forEach(b => b.el.remove());
+            bubbles = [];
+
+            if (allMsgs) {
+                Object.values(allMsgs).forEach(msg => {
+                    if (msg.type === 'clear_all') return;
+                    if (msg.mode === 'img') {
+                        createCustomPhotoBubble(msg.img, msg.text);
+                    } else {
+                        // Sender 视角：如果是拾取消息，显示为 "I PICKED IT UP"
+                        let content = msg.text;
+                        if (content === "SOME ONE PICKED IT UP") content = "I PICKED IT UP";
+                        createBubbleElement({ type: 'text', content: content }, msg.type === 'urgent');
+                    }
+                });
+                // 如果已拾取，显示添加按钮
+                if (hasPickedUp) createPlusBubble();
             }
-            
-            document.body.classList.remove('state-hero');
-            if (data.mode === 'img') {
-                createCustomPhotoBubble(data.img, data.text || "");
+        }
+
+        function handleInitialPickup() {
+            if (hasPickedUp) return;
+            msgRef.push({ 
+                mode: 'text', 
+                text: "SOME ONE PICKED IT UP", 
+                type: 'urgent',
+                time: Date.now()
+            });
+        }
+
+        function handleNormalSend() {
+            const text = document.getElementById('msg-text').value;
+            const file = document.getElementById('msg-img').files[0];
+            if (!text && !file) return;
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    msgRef.push({ mode: 'img', img: e.target.result, text, type: 'normal', time: Date.now() });
+                };
+                reader.readAsDataURL(file);
             } else {
-                createBubbleElement({ type: 'text', content: data.text }, data.type === 'urgent');
+                msgRef.push({ mode: 'text', text, type: 'normal', time: Date.now() });
             }
-        });
+            document.getElementById('menu-layer').style.display = 'none';
+            document.getElementById('msg-text').value = '';
+        }
 
-        // --- 4. 核心创建逻辑 (保留你的弹窗绑定) ---
+        function clearAll() {
+            if(confirm("Reset everything? This will return to stranger mode.")) {
+                msgRef.set({ reset_signal: { type: 'clear_all', time: Date.now() } });
+                location.reload();
+            }
+        }
+
+        // --- 3. 物理引擎 (1:1 还原) ---
+        function createPlusBubble() {
+            const el = document.createElement('div');
+            el.className = 'bubble is-plus'; el.innerHTML = '+';
+            el.onclick = () => document.getElementById('menu-layer').style.display = 'flex';
+            stage.appendChild(el);
+            bubbles.push(setupBubbleObject(el, { type: 'plus' }, false));
+            requestAnimationFrame(() => el.classList.add('spawned'));
+        }
+
         function createBubbleElement(data, isStatus) {
             const el = document.createElement('div');
-            el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
-            el.innerHTML = `<div class="unread-dot"></div>${data.content}`;
+            const isPickup = data.content.includes("PICKED IT UP");
+            el.className = `bubble is-text ${isPickup ? 'is-status' : ''}`;
+            el.innerHTML = data.content;
             stage.appendChild(el);
-            bubbles.push(setupBubbleObject(el, data, isStatus));
+            bubbles.push(setupBubbleObject(el, data, isPickup));
             requestAnimationFrame(() => el.classList.add('spawned'));
-            triggerTopNotif(isStatus ? "System Update" : "Message Received");
         }
 
         function createCustomPhotoBubble(imgSrc, caption) {
             const el = document.createElement('div');
             el.className = `bubble is-img`;
-            el.innerHTML = `<div class="unread-dot"></div><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            el.innerHTML = `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
             stage.appendChild(el);
-            bubbles.push(setupBubbleObject(el, { type: 'img', content: caption, rawImg: imgSrc }, false));
+            bubbles.push(setupBubbleObject(el, { type: 'img', content: caption }, false));
             requestAnimationFrame(() => el.classList.add('spawned'));
-            triggerTopNotif("New Photo Shared");
         }
 
         function setupBubbleObject(el, data, isStatus) {
             const ww = window.innerWidth, wh = window.innerHeight;
-            // 修正初始位置，防止卡在左上角
-            const initialX = ww/2 + (Math.random()-0.5)*200 - 60;
-            const initialY = wh/2 + (Math.random()-0.5)*200 - 60;
-            
+            const initialX = ww/2 + (Math.random()-0.5)*150 - 60;
+            const initialY = wh/2 + (Math.random()-0.5)*150 - 60;
             const bObj = { el, x: initialX, y: initialY, vx: 0, vy: 0, isDragged: false, data, isStatus };
             
-            let startX, startY, startTime;
-            const startAction = (e) => { 
-                startTime = Date.now(); 
-                const touch = e.touches ? e.touches[0] : e; 
-                startX = touch.clientX; startY = touch.clientY; 
-                draggedBubble = bObj; bObj.isDragged = true; 
+            const start = (e) => { const t = e.touches ? e.touches[0] : e; draggedBubble = bObj; bObj.isDragged = true; };
+            const move = (e) => {
+                if (!bObj.isDragged) return;
+                const t = e.touches ? e.touches[0] : e;
+                bObj.x = t.clientX - 60; bObj.y = t.clientY - 60;
             };
-            const endAction = (e) => { 
-                if(!bObj.isDragged) return; 
-                const duration = Date.now() - startTime; 
-                const touch = e.changedTouches ? e.changedTouches[0] : e; 
-                const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY); 
-                // 点击弹窗触发
-                if (duration < 250 && dist < 10) { 
-                    const dot = el.querySelector('.unread-dot'); 
-                    if(dot) dot.style.display = 'none'; 
-                    openModal(bObj); 
-                } 
-                bObj.isDragged = false; draggedBubble = null; 
-            };
+            const end = () => { bObj.isDragged = false; draggedBubble = null; };
 
-            el.addEventListener('mousedown', startAction);
-            el.addEventListener('touchstart', startAction, {passive: false});
-            window.addEventListener('mouseup', endAction);
-            window.addEventListener('touchend', endAction);
-            
+            el.addEventListener('mousedown', start);
+            el.addEventListener('touchstart', start, {passive: false});
+            window.addEventListener('mousemove', move);
+            window.addEventListener('touchmove', move, {passive: false});
+            window.addEventListener('mouseup', end);
+            window.addEventListener('touchend', end);
             return bObj;
         }
 
-        // --- 5. 弹窗交互逻辑 (完全保留 Code 2) ---
-        function openModal(b) {
-            const visual = document.getElementById('m-visual');
-            if (b.data.type === 'img' && b.data.rawImg) {
-                visual.innerHTML = `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">`;
-            } else { visual.innerHTML = ""; }
-            document.getElementById('m-text').innerText = b.data.content || "";
-            document.getElementById('comment-list').innerHTML = "";
-            document.getElementById('comment-area').style.display = 'none';
-            document.getElementById('btn-like').classList.remove('liked');
-            const modal = document.getElementById('modal-overlay');
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('active'), 10);
-        }
-
-        // --- 6. 物理引擎 (完全保留 Code 2 原始算法) ---
         function animate(time) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const ww = window.innerWidth, wh = window.innerHeight, cx = ww / 2, cy = wh / 2;
@@ -237,14 +251,12 @@
                 if (i > 0) { px = bubbles[i-1].x + 60; py = bubbles[i-1].y + 60; }
                 const currX = b.x + 60, currY = b.y + 60;
                 const dx = currX - px, dy = currY - py, dist = Math.sqrt(dx*dx + dy*dy) || 1;
-                
                 if (dist > 300 && !b.isDragged) {
                     const pull = (dist - 300) * 0.02;
                     b.vx -= (dx / dist) * pull; b.vy -= (dy / dist) * pull;
                 }
                 ctx.moveTo(px, py);
                 ctx.quadraticCurveTo((px + currX)/2, (py + currY)/2 + Math.sin(time*0.002+i)*5, currX, currY);
-                
                 if (!b.isDragged) {
                     const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
                     b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
@@ -262,7 +274,6 @@
                     }
                     b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
                 }
-                // 边界限制
                 b.x = Math.max(0, Math.min(ww - 120, b.x));
                 b.y = Math.max(0, Math.min(wh - 120, b.y));
                 b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
@@ -271,78 +282,7 @@
             requestAnimationFrame(animate);
         }
 
-        // --- 7. 保存与辅助逻辑 ---
-        function applyCustomization() {
-            const fileInput = document.getElementById('upload-img');
-            const name = document.getElementById('input-name').value;
-            const desc = document.getElementById('input-desc').value;
-            if (!fileInput.files[0] || !name) { alert("Please select an image and name."); return; }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvasImg = document.createElement('canvas');
-                    const MAX_W = 600;
-                    let w = img.width, h = img.height;
-                    if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
-                    canvasImg.width = w; canvasImg.height = h;
-                    canvasImg.getContext('2d').drawImage(img, 0, 0, w, h);
-                    const flowData = {
-                        imgData: canvasImg.toDataURL('image/jpeg', 0.6),
-                        name: name,
-                        desc: desc || "A shared object.",
-                        dateStr: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
-                    };
-                    configRef.set(flowData);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(fileInput.files[0]);
-        }
-
-        function injectData(data) {
-            document.getElementById('display-name').innerText = data.name;
-            document.getElementById('display-desc').innerText = data.desc;
-            document.getElementById('display-date').innerText = data.dateStr;
-            document.getElementById('display-avatar').src = data.imgData;
-            document.querySelector('.bg-glass').style.backgroundImage = `url(${data.imgData})`;
-        }
-
-        function handleHardReset() {
-            if(confirm("Reset all data?")) {
-                configRef.remove();
-                msgRef.push({ type: 'clear_all', time: Date.now() });
-                location.reload();
-            }
-        }
-
         function initPhysics() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; animate(0); }
-        function triggerTopNotif(txt) {
-            const nt = document.getElementById('top-notif');
-            document.getElementById('notif-text').innerText = txt;
-            nt.classList.add('active');
-            setTimeout(() => nt.classList.remove('active'), 3000);
-        }
-        function closeModal() {
-            const modal = document.getElementById('modal-overlay');
-            modal.classList.remove('active');
-            setTimeout(() => modal.style.display = 'none', 400);
-        }
-        function toggleLike() { document.getElementById('btn-like').classList.toggle('liked'); }
-        function toggleCommentBox() { const area = document.getElementById('comment-area'); area.style.display = area.style.display === 'none' ? 'block' : 'none'; }
-        function postComment() { 
-            const input = document.getElementById('comment-input'); 
-            const list = document.getElementById('comment-list'); 
-            if(input.value.trim()) { 
-                const item = document.createElement('div'); 
-                item.style.fontSize="12px"; item.style.color="#666"; item.style.marginTop="5px"; 
-                item.innerText = input.value; list.appendChild(item); input.value = ""; 
-            } 
-        }
-
-        window.addEventListener('mousemove', (e) => { if (draggedBubble) { draggedBubble.x = e.clientX - 60; draggedBubble.y = e.clientY - 60; } });
-        window.addEventListener('touchmove', (e) => { if (draggedBubble) { draggedBubble.x = e.touches[0].clientX - 60; draggedBubble.y = e.touches[0].clientY - 60; } }, {passive: false});
         window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     </script>
 </body>
