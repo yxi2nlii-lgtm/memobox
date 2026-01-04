@@ -1,254 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>BAMBOO FLOW - SENDER</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* --- 1:1 还原你 index 页面的所有样式 --- */
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-        body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; touch-action: none; }
-        #stage { position: absolute; inset: 0; z-index: 2500; pointer-events: none; }
-        #lineCanvas { position: fixed; inset: 0; z-index: 50; pointer-events: none; }
-        .bg-glass { position: fixed; inset: 0; z-index: -1; background: #222; background-position: center; background-size: cover; transform: scale(1.8); filter: blur(60px) brightness(0.4); }
-        
-        .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; pointer-events: none; }
-        .main-avatar { width: 76px; height: 76px; border-radius: 50%; background: rgba(255,255,255,0.1); overflow: hidden; z-index: 4001; pointer-events: auto; cursor: pointer; transition: transform 0.3s ease; }
-        .main-avatar:active { transform: scale(0.9); }
-        .main-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); cursor: grab; pointer-events: auto; opacity: 0; display: flex; align-items: center; justify-content: center; will-change: transform, opacity; z-index: 3000; }
-        .bubble.spawned { opacity: 1; transition: opacity 1s ease-out; }
-        .bubble.is-text { padding: 18px; font-size: 11px; color: rgba(255,255,255,0.8); text-align: center; line-height: 1.4; }
-        /* Pickup 状态的高亮样式 */
-        .bubble.is-status { background: #ffffff; border: none; color: #000; font-weight: 700; text-transform: uppercase; font-size: 10px; }
-        
-        /* 特殊的 + 按钮泡泡 */
-        .bubble.is-plus { border: 2px dashed rgba(255,255,255,0.3); background: none; font-size: 30px; color: white; cursor: pointer; backdrop-filter: none; }
-
-        /* 发送菜单 */
-        #menu-layer { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
-        .menu-card { width: 85%; max-width: 350px; color: white; background: #222; padding: 25px; border-radius: 25px; border: 1px solid #333; }
-        .input-box { margin-bottom: 15px; }
-        .input-box label { display: block; font-size: 10px; opacity: 0.5; margin-bottom: 5px; }
-        .input-box input, .input-box textarea { width: 100%; background: #333; border: none; border-radius: 10px; padding: 12px; color: white; outline: none; font-family: inherit; }
-        .send-btn { width: 100%; padding: 12px; border-radius: 10px; border: none; background: white; font-weight: 600; cursor: pointer; }
-        
-        #reset-btn { position: fixed; top: 20px; right: 20px; z-index: 5000; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; font-size: 10px; cursor: pointer; opacity: 0.5; }
-    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 </head>
 <body>
-
-    <div class="bg-glass" id="bg-img"></div>
-    <canvas id="lineCanvas"></canvas>
-    
-    <button id="reset-btn" onclick="clearAll()">RESET SENDER</button>
-
-    <div class="center-hub">
-        <div class="main-avatar" onclick="handleInitialPickup()"><img id="display-avatar" src=""></div>
-    </div>
-
-    <div id="stage"></div>
-
-    <div id="menu-layer" onclick="this.style.display='none'">
-        <div class="menu-card" onclick="event.stopPropagation()">
-            <div class="input-box"><label>MESSAGE / CAPTION</label><textarea id="msg-text" rows="3"></textarea></div>
-            <div class="input-box"><label>ADD PHOTO (OPTIONAL)</label><input type="file" id="msg-img" accept="image/*"></div>
-            <button class="send-btn" onclick="handleNormalSend()">SEND</button>
-        </div>
-    </div>
-
     <script>
-        const stage = document.getElementById('stage');
-        const canvas = document.getElementById('lineCanvas');
-        const ctx = canvas.getContext('2d');
-        let bubbles = [];
-        let draggedBubble = null;
+        const firebaseConfig = { /* 同上方的配置内容 */ };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database().ref('flow_messages');
 
-        window.onload = function() {
-            const saved = localStorage.getItem('userObjectData');
-            if (saved) {
-                const data = JSON.parse(saved);
-                document.getElementById('display-avatar').src = data.imgData;
-                document.getElementById('bg-img').style.backgroundImage = `url(${data.imgData})`;
-            }
-            initPhysics();
-            refreshState();
-        };
-
-        // --- 核心逻辑 ---
-
-        function refreshState() {
-            const history = JSON.parse(localStorage.getItem('my_sent_history') || '[]');
-            // 清理当前 DOM
-            bubbles.forEach(b => b.el.remove());
-            bubbles = [];
-
-            if (history.length > 0) {
-                // 渲染历史泡泡
-                history.forEach(msg => {
-                    if (msg.mode === 'img') createCustomPhotoBubble(msg.img, msg.text);
-                    else createBubbleElement({ type: 'text', content: msg.text }, msg.type === 'urgent');
-                });
-                // 解锁 "+" 按钮
-                createPlusBubble();
-            }
-        }
-
-        // 第一次点击头像
-        function handleInitialPickup() {
-            const history = JSON.parse(localStorage.getItem('my_sent_history') || '[]');
-            if (history.length === 0) {
-                // 自己看：I PICK IT UP
-                const local = { mode: 'text', text: "I PICK IT UP", type: 'urgent' };
-                // 对方看：SOME ONE PICKED IT UP
-                const remote = { mode: 'text', text: "SOME ONE PICKED IT UP", type: 'urgent' };
-                
-                sendData(local, remote);
-            }
-        }
-
-        // 后续发送普通消息
-        function handleNormalSend() {
-            const text = document.getElementById('msg-text').value;
-            const file = document.getElementById('msg-img').files[0];
-            if (!text && !file) return;
-
-            const executeSend = (payload) => {
-                sendData(payload); // 普通消息本地远程内容一致
-                document.getElementById('menu-layer').style.display = 'none';
-                document.getElementById('msg-text').value = '';
-            };
-
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => executeSend({ mode: 'img', img: e.target.result, text, type: 'normal' });
-                reader.readAsDataURL(file);
-            } else {
-                executeSend({ mode: 'text', text, type: 'normal' });
-            }
-        }
-
+        // 发送逻辑升级
         function sendData(localPayload, remotePayload = null) {
+            // 1. 保存本地发送历史
             const history = JSON.parse(localStorage.getItem('my_sent_history') || '[]');
             history.push(localPayload);
             localStorage.setItem('my_sent_history', JSON.stringify(history));
             
-            // 角色转换核心：如果 remotePayload 存在则发 remote，否则发 local
+            // 2. 推送到 Firebase (云端)
             const finalRemoteData = remotePayload || localPayload;
-            localStorage.setItem('remote_msg_flow', JSON.stringify(finalRemoteData));
-            localStorage.removeItem('remote_msg_flow');
+            db.push(finalRemoteData); 
             
             refreshState();
         }
 
         function clearAll() {
             localStorage.setItem('my_sent_history', '[]');
-            localStorage.setItem('remote_msg_flow', JSON.stringify({type: 'clear_all'}));
+            db.set({ clear: { type: 'clear_all', time: Date.now() } }); 
             location.reload();
         }
-
-        // --- 物理引擎 (完全保留 index 的逻辑) ---
-
-        function createPlusBubble() {
-            const el = document.createElement('div');
-            el.className = 'bubble is-plus'; el.innerHTML = '+';
-            el.onclick = () => document.getElementById('menu-layer').style.display = 'flex';
-            stage.appendChild(el);
-            bubbles.push(setupBubbleObject(el, { type: 'plus' }, false));
-            requestAnimationFrame(() => el.classList.add('spawned'));
-        }
-
-        function createBubbleElement(data, isStatus) {
-            const el = document.createElement('div');
-            // 如果是 Pickup 状态，增加 is-status 样式
-            const isPickup = data.content.includes("PICK IT UP");
-            el.className = `bubble is-text ${isPickup ? 'is-status' : ''}`;
-            el.innerHTML = data.content;
-            stage.appendChild(el);
-            bubbles.push(setupBubbleObject(el, data, isPickup));
-            requestAnimationFrame(() => el.classList.add('spawned'));
-        }
-
-        function createCustomPhotoBubble(imgSrc, caption) {
-            const el = document.createElement('div');
-            el.className = `bubble is-img`;
-            el.innerHTML = `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-            stage.appendChild(el);
-            bubbles.push(setupBubbleObject(el, { type: 'img', content: caption }, false));
-            requestAnimationFrame(() => el.classList.add('spawned'));
-        }
-
-        function setupBubbleObject(el, data, isStatus) {
-            const ww = window.innerWidth, wh = window.innerHeight;
-            const cx = ww/2-60, cy = wh/2-60;
-            const angle = Math.random() * Math.PI * 2;
-            const bObj = { el, x: cx + Math.cos(angle)*180, y: cy + Math.sin(angle)*180, vx: 0, vy: 0, isDragged: false, data, isStatus };
-            
-            const start = (e) => { const t = e.touches ? e.touches[0] : e; draggedBubble = bObj; bObj.isDragged = true; };
-            const move = (e) => {
-                if (!bObj.isDragged) return;
-                const t = e.touches ? e.touches[0] : e;
-                bObj.x = t.clientX - 60; bObj.y = t.clientY - 60;
-            };
-            const end = () => { bObj.isDragged = false; draggedBubble = null; };
-
-            el.addEventListener('mousedown', start);
-            el.addEventListener('touchstart', start, {passive: false});
-            window.addEventListener('mousemove', move);
-            window.addEventListener('touchmove', move, {passive: false});
-            window.addEventListener('mouseup', end);
-            window.addEventListener('touchend', end);
-            return bObj;
-        }
-
-        function animate(time) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const ww = window.innerWidth, wh = window.innerHeight, cx = ww / 2, cy = wh / 2;
-            ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            bubbles.forEach((b, i) => {
-                let px = cx, py = cy;
-                // 连接到数组的前一个泡泡
-                if (i > 0) { px = bubbles[i-1].x + 60; py = bubbles[i-1].y + 60; }
-                const currX = b.x + 60, currY = b.y + 60;
-                const dx = currX - px, dy = currY - py, dist = Math.sqrt(dx*dx + dy*dy) || 1;
-                
-                if (dist > 300 && !b.isDragged) {
-                    const pull = (dist - 300) * 0.02;
-                    b.vx -= (dx / dist) * pull; b.vy -= (dy / dist) * pull;
-                }
-                ctx.moveTo(px, py);
-                ctx.quadraticCurveTo((px + currX)/2, (py + currY)/2 + Math.sin(time*0.002+i)*5, currX, currY);
-                
-                if (!b.isDragged) {
-                    const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
-                    b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
-                    bubbles.forEach((b2, j) => {
-                        if(i === j) return;
-                        const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
-                        if(pdist < 135) {
-                            const p = (135 - pdist) * 0.02;
-                            b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p;
-                        }
-                    });
-                    if(cdist < 100) {
-                        const p = (100 - cdist) * 0.05;
-                        b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p;
-                    }
-                    b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
-                }
-                b.x = Math.max(0, Math.min(ww - 120, b.x));
-                b.y = Math.max(0, Math.min(wh - 120, b.y));
-                b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
-            });
-            ctx.stroke();
-            requestAnimationFrame(animate);
-        }
-
-        function initPhysics() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; animate(0); }
-        window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     </script>
 </body>
 </html>
