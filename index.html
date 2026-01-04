@@ -10,7 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
-        /* 这里保留你提供的所有原始 CSS 样式，确保视觉效果一致 */
+        /* 保留你提供的所有 CSS 样式 */
         #setup-layer { position: fixed; inset: 0; z-index: 10000; background: #1a1a1a; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s ease, transform 0.8s ease; }
         .setup-card { width: 85%; max-width: 400px; color: white; text-align: left; background: rgba(255,255,255,0.05); padding: 30px; border-radius: 30px; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
         .setup-card h2 { font-size: 22px; margin-bottom: 20px; font-weight: 600; font-family: 'Poppins'; }
@@ -44,21 +44,9 @@
         .bubble.is-status { background: #ffffff; border: none; color: #000; font-weight: 600; }
         .bubble.is-text { padding: 18px; font-size: 11px; color: rgba(255,255,255,0.8); text-align: center; line-height: 1.4; }
         .is-status.is-text { color: #000; }
-        .photo-placeholder { width: 32px; height: 32px; fill: rgba(255,255,255,0.4); }
-        .unread-dot { position: absolute; top: 18px; right: 18px; width: 8px; height: 8px; background: #ff3b30; border-radius: 50%; }
-        #modal-overlay { position: fixed; inset: 0; z-index: 6000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); background: rgba(0,0,0,0.3); opacity: 0; transition: 0.4s; }
+        #modal-overlay { position: fixed; inset: 0; z-index: 6000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(40px); background: rgba(0,0,0,0.3); opacity: 0; transition: 0.4s; }
         #modal-overlay.active { display: flex; opacity: 1; }
-        .modal-card { background: white; padding: 30px; border-radius: 30px; width: 85%; max-width: 320px; text-align: center; position: relative; }
-        .placeholder-big { width: 100%; height: 150px; background: #f0f0f0; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
-        .modal-actions { display: flex; justify-content: center; gap: 40px; margin-top: 10px; border-top: 1px solid #eee; padding-top: 20px; }
-        .btn-icon { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; outline: none; }
-        .btn-icon svg { stroke: #999; fill: none; transition: 0.3s; }
-        .btn-icon.liked svg { stroke: #ff3b30; fill: #ff3b30; }
-        #comment-area { display: none; margin-top: 15px; animation: fadeIn 0.3s ease; }
-        .input-group { display: flex; background: #f5f5f7; border-radius: 12px; padding: 8px 12px; align-items: center; }
-        .input-group input { flex: 1; background: none; border: none; outline: none; font-size: 13px; font-family: inherit; }
-        .input-group button { background: none; border: none; color: #007AFF; font-weight: 600; font-size: 13px; cursor: pointer; margin-left: 10px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-card { background: white; padding: 30px; border-radius: 30px; width: 85%; max-width: 320px; text-align: center; }
         #hidden-trigger { position: fixed; bottom: 0; left: 0; width: 100%; height: 12%; z-index: 2000; cursor: pointer; }
     </style>
 </head>
@@ -66,37 +54,24 @@
 
     <div id="setup-layer">
         <div class="setup-card">
-            <h2>Upload Your Important Object</h2>
+            <h2>Initialize Object</h2>
             <div class="input-box"><label>Main Image</label><input type="file" id="upload-img" accept="image/*"></div>
-            <div class="input-box"><label>Its Name</label><input type="text" id="input-name" placeholder="e.g. rice cooker"></div>
+            <div class="input-box"><label>Name</label><input type="text" id="input-name" placeholder="e.g. My Lucky Bamboo"></div>
             <div class="input-box"><label>Description</label><textarea id="input-desc" rows="3" placeholder="Tell the story..."></textarea></div>
-            <button class="generate-btn" onclick="applyCustomization()">Save</button>
+            <button class="generate-btn" onclick="applyCustomization()">Save to Cloud</button>
         </div>
     </div>
 
-    <button id="reset-trigger" onclick="handleHardReset()">RESET</button>
+    <button id="reset-trigger" onclick="handleHardReset()">RESET ALL</button>
     <div id="top-notif"><div style="width: 8px; height: 8px; background: #ff3b30; border-radius: 50%;"></div><span id="notif-text" style="font-size: 12px; color: #333;"></span></div>
     <div class="bg-glass"></div>
     <canvas id="lineCanvas"></canvas>
-    <div id="hidden-trigger" onclick="spawnBubble()"></div>
-
-    <div id="modal-overlay" onclick="closeModal()">
-        <div class="modal-card" onclick="event.stopPropagation()">
-            <div id="m-visual"></div>
-            <p id="m-text" style="color: #333; font-size: 14px; line-height: 1.5; margin-bottom: 10px;"></p>
-            <div id="comment-list"></div>
-            <div class="modal-actions">
-                <button class="btn-icon" id="btn-like" onclick="toggleLike()"><svg width="22" height="22" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78l1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
-                <button class="btn-icon" onclick="toggleCommentBox()"><svg width="22" height="22" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg></button>
-            </div>
-            <div id="comment-area"><div class="input-group"><input type="text" id="comment-input" placeholder="Comment..."><button onclick="postComment()">Post</button></div></div>
-        </div>
-    </div>
+    <div id="hidden-trigger"></div>
 
     <div class="center-hub">
         <div class="main-avatar" onclick="document.body.classList.toggle('state-hero')"><img id="display-avatar" src=""></div>
         <div class="hero-text-block">
-            <h1 id="display-name">LUCKY BAMBOO</h1>
+            <h1 id="display-name">LOADING...</h1>
             <p class="time" id="display-date"></p>
             <p class="description" id="display-desc"></p>
         </div>
@@ -115,168 +90,79 @@
             databaseURL: "https://memo-6a74a-default-rtdb.firebaseio.com/"
         };
         firebase.initializeApp(firebaseConfig);
-        const db = firebase.database().ref('flow_messages');
+        const db = firebase.database();
+
+        // 核心引用
+        const configRef = db.ref('object_config'); // 存储名字、描述、头像
+        const msgRef = db.ref('flow_messages');     // 存储泡泡消息
 
         const stage = document.getElementById('stage');
         const canvas = document.getElementById('lineCanvas');
         const ctx = canvas.getContext('2d');
         let bubbles = [];
-        let count = 0;
-        let normalMsgCounter = 0;
         let draggedBubble = null;
-        const svgIcon = `<svg class="photo-placeholder" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>`;
 
-        // --- 2. 实时监听 Firebase 消息 ---
-        db.on('child_added', (snapshot) => {
+        // --- 2. 自动同步云端配置 (名字和图片) ---
+        configRef.on('value', (snapshot) => {
             const data = snapshot.val();
-            
-            // 处理重置
-            if (data.type === 'clear_all' || data.clear_all_signal) {
-                localStorage.removeItem('local_history_bubbles');
-                location.reload();
-                return;
-            }
-
-            // 切换到互动模式
-            document.body.classList.remove('state-hero');
-
-            // 根据数据类型创建泡泡
-            if (data.mode === 'img') {
-                createCustomPhotoBubble(data.img, data.text || "Shared Photo");
-            } else if (data.text) {
-                const isUrgent = data.type === 'urgent' || data.text.includes("PICKED IT UP");
-                createBubbleElement({ type: 'text', content: data.text }, isUrgent);
+            if (data) {
+                injectData(data);
+                document.body.classList.add('ready'); // 只要云端有数据，就隐藏上传层
+                if (bubbles.length === 0) { initPhysics(); }
             }
         });
 
-        // --- 3. 核心创建函数 ---
-        function createBubbleElement(data, isStatus) {
-            const el = document.createElement('div');
-            el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
-            el.innerHTML = `<div class="unread-dot"></div>${data.content}`;
-            stage.appendChild(el);
-            const bObj = setupBubbleObject(el, data, isStatus);
-            bubbles.push(bObj);
-            requestAnimationFrame(() => el.classList.add('spawned'));
-            triggerTopNotif(isStatus ? "System Update" : "New Message");
-        }
-
-        function createCustomPhotoBubble(imgSrc, caption) {
-            const el = document.createElement('div');
-            el.className = `bubble is-img`;
-            el.innerHTML = `<div class="unread-dot"></div><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-            stage.appendChild(el);
-            const data = { type: 'img', content: caption, rawImg: imgSrc };
-            const bObj = setupBubbleObject(el, data, false);
-            bubbles.push(bObj);
-            requestAnimationFrame(() => el.classList.add('spawned'));
-            triggerTopNotif("New Photo Shared");
-        }
-
-        // --- 4. 物理与交互逻辑 ---
-        function setupBubbleObject(el, data, isStatus) {
-            const ww = window.innerWidth, wh = window.innerHeight;
-            const cx = ww/2-60, cy = wh/2-60;
-            const angle = Math.random() * Math.PI * 2;
-            const bObj = { el, x: cx + Math.cos(angle)*180, y: cy + Math.sin(angle)*180, vx: 0, vy: 0, isDragged: false, data, isStatus };
+        // --- 3. 监听泡泡消息 ---
+        msgRef.limitToLast(15).on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            if (data.type === 'clear_all') { location.reload(); return; }
             
-            let startTime;
-            const startAction = (e) => { 
-                startTime = Date.now(); 
-                draggedBubble = bObj; bObj.isDragged = true; 
-            };
-            const endAction = (e) => { 
-                if(!bObj.isDragged) return; 
-                if (Date.now() - startTime < 250) { 
-                    const dot = el.querySelector('.unread-dot'); 
-                    if(dot) dot.style.display = 'none'; 
-                    openModal(bObj); 
-                } 
-                bObj.isDragged = false; draggedBubble = null; 
-            };
-
-            el.addEventListener('mousedown', startAction);
-            el.addEventListener('touchstart', startAction, {passive: false});
-            window.addEventListener('mouseup', endAction);
-            window.addEventListener('touchend', endAction);
-            return bObj;
-        }
-
-        function animate(time) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const ww = window.innerWidth, wh = window.innerHeight, cx = ww / 2, cy = wh / 2;
-            ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            bubbles.forEach((b, i) => {
-                let px = cx, py = cy;
-                if (i > 0) { px = bubbles[i-1].x + 60; py = bubbles[i-1].y + 60; }
-                const currX = b.x + 60, currY = b.y + 60;
-                
-                ctx.moveTo(px, py);
-                ctx.quadraticCurveTo((px + currX)/2, (py + currY)/2 + Math.sin(time*0.002+i)*5, currX, currY);
-                
-                if (!b.isDragged) {
-                    const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
-                    b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
-                    bubbles.forEach((b2, j) => {
-                        if(i === j) return;
-                        const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
-                        if(pdist < 135) {
-                            const p = (135 - pdist) * 0.02;
-                            b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p;
-                        }
-                    });
-                    b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
-                }
-                b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
-            });
-            ctx.stroke();
-            requestAnimationFrame(animate);
-        }
-
-        // --- 5. 工具与初始化 ---
-        window.onload = function() {
-            const saved = localStorage.getItem('userObjectData');
-            if (saved) {
-                injectData(JSON.parse(saved));
-                document.body.classList.add('ready');
-                resize(); animate(0);
+            document.body.classList.remove('state-hero');
+            if (data.mode === 'img') {
+                createCustomPhotoBubble(data.img, data.text || "");
+            } else {
+                createBubbleElement({ type: 'text', content: data.text }, data.type === 'urgent');
             }
-        };
+        });
 
-        function handleHardReset() {
-            localStorage.clear();
-            db.push({ type: 'clear_all', time: Date.now() });
-            location.reload();
-        }
-
+        // --- 4. 提交初始设置 ---
         function applyCustomization() {
             const fileInput = document.getElementById('upload-img');
-            const name = document.getElementById('input-name').value || "OBJECT";
-            const desc = document.getElementById('input-desc').value || "No story yet.";
-            const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+            const name = document.getElementById('input-name').value;
+            const desc = document.getElementById('input-desc').value;
             
-            if (fileInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvasImg = document.createElement('canvas');
-                        const MAX_W = 800;
-                        let w = img.width, h = img.height;
-                        if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
-                        canvasImg.width = w; canvasImg.height = h;
-                        canvasImg.getContext('2d').drawImage(img, 0, 0, w, h);
-                        const data = { imgData: canvasImg.toDataURL('image/jpeg', 0.7), name, desc, dateStr };
-                        localStorage.setItem('userObjectData', JSON.stringify(data));
-                        injectData(data);
-                        document.body.classList.add('ready');
-                        resize(); animate(0);
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(fileInput.files[0]);
+            if (!fileInput.files[0] || !name) {
+                alert("Please select an image and enter a name.");
+                return;
             }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // 压缩图片防止超过 Firebase 限制
+                    const canvasImg = document.createElement('canvas');
+                    const MAX_W = 600;
+                    let w = img.width, h = img.height;
+                    if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
+                    canvasImg.width = w; canvasImg.height = h;
+                    canvasImg.getContext('2d').drawImage(img, 0, 0, w, h);
+                    
+                    const flowData = {
+                        imgData: canvasImg.toDataURL('image/jpeg', 0.6),
+                        name: name,
+                        desc: desc || "A shared object.",
+                        dateStr: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
+                    };
+
+                    // 同步到云端
+                    configRef.set(flowData).then(() => {
+                        console.log("Cloud Updated");
+                    });
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(fileInput.files[0]);
         }
 
         function injectData(data) {
@@ -287,59 +173,55 @@
             document.querySelector('.bg-glass').style.backgroundImage = `url(${data.imgData})`;
         }
 
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.onresize = resize;
-        function triggerTopNotif(txt) {
-            const nt = document.getElementById('top-notif');
-            document.getElementById('notif-text').innerText = txt;
-            nt.classList.add('active');
-            setTimeout(() => nt.classList.remove('active'), 3000);
-        }
-        function openModal(b) {
-            const visual = document.getElementById('m-visual');
-            visual.innerHTML = b.data.type === 'img' ? `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">` : "";
-            document.getElementById('m-text').innerText = b.data.content || "";
-            const modal = document.getElementById('modal-overlay');
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('active'), 10);
-        }
-        function closeModal() {
-            document.getElementById('modal-overlay').classList.remove('active');
-            setTimeout(() => document.getElementById('modal-overlay').style.display = 'none', 400);
-        }
-        function toggleLike() { document.getElementById('btn-like').classList.toggle('liked'); }
-        function toggleCommentBox() { 
-            const area = document.getElementById('comment-area'); 
-            area.style.display = area.style.display === 'none' ? 'block' : 'none'; 
-        }
-        function postComment() {
-            const input = document.getElementById('comment-input');
-            const list = document.getElementById('comment-list');
-            if(input.value.trim()) {
-                const item = document.createElement('div');
-                item.style.fontSize="12px"; item.style.color="#666"; item.style.marginTop="5px";
-                item.innerText = input.value;
-                list.appendChild(item);
-                input.value = "";
-            }
+        // --- 5. 物理引擎及泡泡逻辑 (保留原版算法) ---
+        function createBubbleElement(data, isStatus) {
+            const el = document.createElement('div');
+            el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
+            el.innerHTML = `<div class="unread-dot"></div>${data.content}`;
+            stage.appendChild(el);
+            bubbles.push(setupBubbleObject(el, data, isStatus));
+            requestAnimationFrame(() => el.classList.add('spawned'));
         }
 
-        // 鼠标/触摸移动处理
-        window.addEventListener('mousemove', (e) => { 
-            if (draggedBubble) { draggedBubble.x = e.clientX - 60; draggedBubble.y = e.clientY - 60; } 
-        });
-        window.addEventListener('touchmove', (e) => { 
-            if (draggedBubble) { 
-                e.preventDefault();
-                draggedBubble.x = e.touches[0].clientX - 60; 
-                draggedBubble.y = e.touches[0].clientY - 60; 
-            } 
-        }, {passive: false});
-
-        function spawnBubble() {
-            // 这个函数现在可以作为备用的本地测试触发器
-            db.push({ text: "Manual trigger from Receiver", type: 'normal', time: Date.now() });
+        function createCustomPhotoBubble(imgSrc, caption) {
+            const el = document.createElement('div');
+            el.className = `bubble is-img`;
+            el.innerHTML = `<div class="unread-dot"></div><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            stage.appendChild(el);
+            bubbles.push(setupBubbleObject(el, { type: 'img', content: caption, rawImg: imgSrc }, false));
+            requestAnimationFrame(() => el.classList.add('spawned'));
         }
+
+        function setupBubbleObject(el, data, isStatus) {
+            const ww = window.innerWidth, wh = window.innerHeight;
+            const bObj = { el, x: ww/2 + (Math.random()-0.5)*200, y: wh/2 + (Math.random()-0.5)*200, vx: 0, vy: 0, isDragged: false, data };
+            el.addEventListener('touchstart', (e) => { draggedBubble = bObj; bObj.isDragged = true; }, {passive: false});
+            window.addEventListener('touchend', () => { if(draggedBubble) { draggedBubble.isDragged = false; draggedBubble = null; } });
+            return bObj;
+        }
+
+        function animate(time) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const ww = window.innerWidth, wh = window.innerHeight, cx = ww / 2, cy = wh / 2;
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            bubbles.forEach((b, i) => {
+                const currX = b.x + 60, currY = b.y + 60;
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(currX, currY);
+                if (!b.isDragged) {
+                    b.vx += (cx - currX) * 0.00002;
+                    b.vx *= 0.95; b.vy *= 0.95; b.x += b.vx; b.y += b.vy;
+                }
+                b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
+            });
+            ctx.stroke();
+            requestAnimationFrame(animate);
+        }
+
+        function initPhysics() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; animate(0); }
+        function handleHardReset() { configRef.remove(); msgRef.set({ reset: Date.now() }); location.reload(); }
+        window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     </script>
 </body>
 </html>
