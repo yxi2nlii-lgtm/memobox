@@ -19,7 +19,7 @@
         /* 介绍区域 */
         .intro-container { position: fixed; top: 18%; width: 100%; text-align: center; z-index: 4000; pointer-events: none; padding: 0 40px; }
         #display-name { font-size: 19px; font-weight: 600; margin-bottom: 8px; opacity: 0; transition: opacity 1s; text-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        #display-desc { font-size: 11px; opacity: 0; transition: opacity 1s 0.5s; line-height: 1.6; color: rgba(255,255,255,0.6); max-width: 260px; margin: 0 auto; }
+        #display-desc { font-size: 11px; opacity: 0; transition: opacity 1s 0.5s; line-height: 1.6; color: rgba(255,255,255,0.6); max-width: 260px; margin: 0 auto; font-style: italic; }
 
         .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; pointer-events: none; }
         
@@ -39,7 +39,7 @@
             100% { transform: scale(2.2); opacity: 0; }
         }
 
-        /* 还原之前的文字提示样式 */
+        /* 提示样式 */
         #status-hint { 
             margin-top: 20px; 
             font-size: 9px; 
@@ -49,12 +49,18 @@
         }
         @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.7; } }
 
-        /* 气泡样式 */
-        .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); cursor: grab; pointer-events: auto; opacity: 0; display: flex; align-items: center; justify-content: center; will-change: transform, opacity; z-index: 3000; }
+        /* 气泡样式 - 修复文字看不见的问题 */
+        .bubble { position: absolute; border-radius: 50%; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); cursor: grab; pointer-events: auto; opacity: 0; display: flex; align-items: center; justify-content: center; will-change: transform, opacity; z-index: 3000; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .bubble.spawned { opacity: 1; transition: opacity 1s ease-out; }
-        .bubble.is-text { padding: 18px; font-size: 11px; color: rgba(255,255,255,0.8); text-align: center; line-height: 1.4; }
-        .bubble.is-status { background: #ffffff; border: none; color: #000; font-weight: 700; text-transform: uppercase; font-size: 10px; }
-        .bubble.is-plus { border: 2px dashed rgba(255,255,255,0.4); background: none; font-size: 32px; color: white; cursor: pointer; backdrop-filter: none; }
+        
+        /* 普通文字气泡 - 黑色文字 */
+        .bubble.is-text { padding: 18px; font-size: 11px; color: #000000; text-align: center; line-height: 1.4; font-weight: 400; }
+        
+        /* 特殊状态气泡 */
+        .bubble.is-status { background: #ffffff; border: none; color: #000000; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+        
+        /* 添加按钮气泡 */
+        .bubble.is-plus { border: 2px dashed rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); font-size: 32px; color: white; cursor: pointer; backdrop-filter: none; box-shadow: none; }
 
         /* 菜单弹窗 */
         #menu-layer { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; backdrop-filter: blur(15px); }
@@ -74,7 +80,7 @@
     
     <button id="reset-btn" onclick="clearAll()">RESET SYSTEM</button>
 
-    <div class="intro-container">
+    <div class="intro-container" id="intro-box">
         <h2 id="display-name">Hi stranger...</h2>
         <p id="display-desc"></p>
     </div>
@@ -138,9 +144,15 @@
                     const desc = data.userDesc || data.desc || "";
                     
                     nameEl.innerText = `Hi stranger, this is ${name}`;
-                    descEl.innerText = desc;
-                    nameEl.style.opacity = 1;
-                    descEl.style.opacity = 1;
+                    descEl.innerText = desc ? `“${desc}”` : ""; // 加上引号
+                    
+                    // 如果已经捡起，则隐藏文字
+                    if (hasPickedUp) {
+                        document.getElementById('intro-box').style.display = 'none';
+                    } else {
+                        nameEl.style.opacity = 1;
+                        descEl.style.opacity = 1;
+                    }
                 }
             });
 
@@ -158,10 +170,12 @@
                 hasPickedUp = foundPickup;
                 const hint = document.getElementById('status-hint');
                 const ripples = document.querySelectorAll('.ripple');
-                const display = hasPickedUp ? 'none' : 'block';
+                const intro = document.getElementById('intro-box');
                 
+                const display = hasPickedUp ? 'none' : 'block';
                 hint.style.display = display;
                 ripples.forEach(r => r.style.display = display);
+                if(hasPickedUp) intro.style.display = 'none'; // 捡起后隐藏文字
                 
                 refreshState(val);
             });
@@ -188,12 +202,16 @@
 
         function handleInitialPickup() {
             if (hasPickedUp) return;
-            msgRef.push({ 
-                mode: 'text', 
-                text: "SOME ONE PICKED IT UP", 
-                type: 'urgent',
-                time: Date.now()
-            });
+
+            // 二次确认逻辑
+            if (confirm("Are you sure you want to pick up this memory?")) {
+                msgRef.push({ 
+                    mode: 'text', 
+                    text: "SOME ONE PICKED IT UP", 
+                    type: 'urgent',
+                    time: Date.now()
+                });
+            }
         }
 
         function handleNormalSend() {
@@ -222,7 +240,7 @@
             }
         }
 
-        // --- 3. 物理引擎 (保持不变) ---
+        // --- 3. 物理引擎 ---
         function createPlusBubble() {
             const el = document.createElement('div');
             el.className = 'bubble is-plus'; el.innerHTML = '+';
@@ -234,8 +252,8 @@
 
         function createBubbleElement(data, isStatus) {
             const el = document.createElement('div');
-            const isPickup = data.content.includes("PICKED IT UP");
-            el.className = `bubble is-text ${isPickup ? 'is-status' : ''}`;
+            const isPickup = data.content.includes("PICKED IT UP") || data.content.includes("I PICKED IT UP");
+            el.className = `bubble ${isPickup ? 'is-status' : 'is-text'}`;
             el.innerHTML = data.content;
             stage.appendChild(el);
             bubbles.push(setupBubbleObject(el, data, isPickup));
@@ -284,15 +302,19 @@
                 if (i > 0) { px = bubbles[i-1].x + 60; py = bubbles[i-1].y + 60; }
                 const currX = b.x + 60, currY = b.y + 60;
                 const dx = currX - px, dy = currY - py, dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                
                 if (dist > 300 && !b.isDragged) {
                     const pull = (dist - 300) * 0.02;
                     b.vx -= (dx / dist) * pull; b.vy -= (dy / dist) * pull;
                 }
+                
                 ctx.moveTo(px, py);
                 ctx.quadraticCurveTo((px + currX)/2, (py + currY)/2 + Math.sin(time*0.002+i)*5, currX, currY);
+                
                 if (!b.isDragged) {
                     const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
                     b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
+                    
                     bubbles.forEach((b2, j) => {
                         if(i === j) return;
                         const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
@@ -301,6 +323,7 @@
                             b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p;
                         }
                     });
+                    
                     if(cdist < 100) {
                         const p = (100 - cdist) * 0.05;
                         b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p;
