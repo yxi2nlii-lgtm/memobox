@@ -44,8 +44,8 @@
     color: #000;
     font-weight: 600;       /* 加粗字体 */
     cursor: pointer;
-    font-size: 18px;        /* 这里调大字号，建议 18px-20px */
-    letter-spacing: 1px;    /* 让字母间距拉开一点，更有高级感 */
+    font-size: 17px;        /* 这里调大字号，建议 18px-20px */
+    letter-spacing: 0px;    /* 让字母间距拉开一点，更有高级感 */
 }
         body.ready #setup-layer { opacity: 0; pointer-events: none; transform: translateY(-20px); }
         #reset-trigger { position: fixed; top: 20px; right: 20px; z-index: 5000; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; font-size: 10px; cursor: pointer; opacity: 0.3; }
@@ -153,16 +153,19 @@
 
 
 <script>
-        // --- 基础配置 ---
+        // --- 1. 基础物理配置 ---
         const stage = document.getElementById('stage');
         const canvas = document.getElementById('lineCanvas');
         const ctx = canvas.getContext('2d');
         let bubbles = [];
         let draggedBubble = null;
 
-        // --- Demo 数据 (换成了更稳的图床链接) ---
+        // --- 2. Demo 数据逻辑 ---
+        // 第一条：只出现一次的开场白
+        const firstMessage = { type: 'urgent', text: "Someone picked it up! Your plant has a new home." };
+
+        // 循环列表：之后的温馨故事
         const demoMessages = [
-            { type: 'urgent', text: "Someone picked it up! Your plant has a new home." },
             { mode: 'img', text: "It’s all settled in on my desk and looking very vibrant.", img: "https://picsum.photos/id/28/400/400" },
             { mode: 'img', text: "A tiny new sprout just appeared; looks like it’s happy here.", img: "https://picsum.photos/id/152/400/400" },
             { mode: 'text', text: "Fresh water and a little trim today. Looking much cleaner now." },
@@ -171,7 +174,7 @@
         ];
         let messageIndex = 0;
 
-        // --- 核心：保存并启动 Demo ---
+        // --- 3. 启动函数 ---
         function applyCustomization() {
             const fileInput = document.getElementById('upload-img');
             const name = document.getElementById('input-name').value;
@@ -184,7 +187,7 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                // 更新 UI
+                // 更新主界面头像和文字
                 document.getElementById('display-avatar').src = e.target.result;
                 document.getElementById('display-name').innerText = name;
                 document.getElementById('display-desc').innerText = desc || "A shared object.";
@@ -194,21 +197,25 @@
                 document.body.classList.add('ready');
                 initPhysics();
 
-                // 2秒后启动第一个气泡，之后每10秒一个
-                setTimeout(() => {
-                    startDemoLoop();
-                }, 2000); 
+                // 2秒后启动 Demo
+                setTimeout(startDemoSequence, 2000); 
             };
             reader.readAsDataURL(fileInput.files[0]);
         }
 
-        function startDemoLoop() {
-            sendNextDemoMessage(); 
-            setInterval(sendNextDemoMessage, 10000); 
+        function startDemoSequence() {
+            // 第一步：先发唯一的开场白
+            sendSpecificMessage(firstMessage);
+            
+            // 第二步：每隔10秒循环发送后面的内容
+            setInterval(() => {
+                sendSpecificMessage(demoMessages[messageIndex]);
+                messageIndex = (messageIndex + 1) % demoMessages.length;
+            }, 10000); 
         }
 
-        function sendNextDemoMessage() {
-            const msg = demoMessages[messageIndex];
+        function sendSpecificMessage(msg) {
+            // 确保自动退出大图模式，展示气泡
             document.body.classList.remove('state-hero');
 
             if (msg.mode === 'img') {
@@ -217,15 +224,14 @@
                 createBubbleElement({ type: 'text', content: msg.text }, msg.type === 'urgent');
             }
 
+            // 顶部通知
             const notif = document.getElementById('top-notif');
             document.getElementById('notif-text').innerText = "A new memory arrives...";
             notif.classList.add('active');
             setTimeout(() => notif.classList.remove('active'), 4000);
-
-            messageIndex = (messageIndex + 1) % demoMessages.length;
         }
 
-        // --- 气泡创建修复版 ---
+        // --- 4. 气泡渲染逻辑 ---
         function createBubbleElement(data, isStatus) {
             const el = document.createElement('div');
             el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
@@ -238,20 +244,19 @@
         function createCustomPhotoBubble(imgSrc, caption) {
             const el = document.createElement('div');
             el.className = `bubble is-img`;
-            // 修复点：确保图片撑满气泡容器
             el.innerHTML = `
                 <div class="unread-dot"></div>
                 <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; pointer-events:none;">
             `;
             stage.appendChild(el);
-            // 将 imgSrc 存入 data 供弹窗使用
             bubbles.push(setupBubbleObject(el, { type: 'img', content: caption, rawImg: imgSrc }, false));
             requestAnimationFrame(() => el.classList.add('spawned'));
         }
 
         function setupBubbleObject(el, data, isStatus) {
             const ww = window.innerWidth, wh = window.innerHeight;
-            const bObj = { el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, isDragged: false, data, isStatus };
+            // 初始速度略大，增加动感
+            const bObj = { el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, isDragged: false, data, isStatus };
             
             let startX, startY, startTime;
             const down = (x, y) => { startX = x; startY = y; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; };
@@ -269,7 +274,7 @@
             return bObj;
         }
 
-        // --- 物理与动画 (精简版) ---
+        // --- 5. 动画引擎 ---
         function animate(time) {
             const dpr = window.devicePixelRatio || 1;
             ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
@@ -311,9 +316,9 @@
         window.addEventListener('mousemove', e => { if(draggedBubble){ draggedBubble.x=e.clientX-60; draggedBubble.y=e.clientY-60; } });
         window.addEventListener('touchmove', e => { if(draggedBubble){ const t=e.touches[0]; draggedBubble.x=t.clientX-60; draggedBubble.y=t.clientY-60; e.preventDefault(); } }, {passive: false});
 
+        // --- 6. 交互组件 ---
         function openModal(b) {
             const visual = document.getElementById('m-visual');
-            // 弹窗里也确保显示图片
             visual.innerHTML = (b.data.type==='img' || b.data.rawImg) ? `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">` : "";
             document.getElementById('m-text').innerText = b.data.content || "";
             document.getElementById('modal-overlay').style.display = 'flex';
