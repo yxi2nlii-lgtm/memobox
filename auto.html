@@ -374,24 +374,59 @@
             requestAnimationFrame(() => el.classList.add('spawned'));
         }
 
-        function setupBubbleObject(el, data, isStatus) {
+function setupBubbleObject(el, data, isStatus) {
             const ww = window.innerWidth, wh = window.innerHeight;
             const bObj = { 
                 el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, 
                 isDragged: false, data, isStatus,
-                comments: [] // 这里创建了独立记忆
+                comments: [] 
             };
+            
             let startX, startY, startTime;
-            const down = (x, y) => { startX = x; startY = y; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; };
+
+            const down = (x, y) => { 
+                startX = x; 
+                startY = y; 
+                startTime = Date.now(); 
+                draggedBubble = bObj; 
+                bObj.isDragged = true; 
+                // 视觉反馈：按下时稍微缩小
+                el.style.transition = "transform 0.1s";
+            };
+
             const up = (x, y) => {
                 if(!bObj.isDragged) return;
-                if(Math.hypot(x-startX, y-startY) < 20 && (Date.now()-startTime)<300) openModal(bObj);
-                bObj.isDragged = false; draggedBubble = null;
+                
+                const moveDist = Math.hypot(x - startX, y - startY);
+                const duration = Date.now() - startTime;
+
+                // --- 优化判定条件 ---
+                // 1. 距离从 20 放大到 40 (防止手指肉厚导致的微小位移判定为拖拽)
+                // 2. 时间从 300ms 放大到 500ms (允许稍微慢一点的点击)
+                if(moveDist < 40 && duration < 500) {
+                    openModal(bObj);
+                }
+                
+                bObj.isDragged = false; 
+                draggedBubble = null;
+                el.style.transition = ""; // 恢复物理引擎控制
             };
+
+            // 鼠标事件
             el.addEventListener('mousedown', e => down(e.clientX, e.clientY));
-            el.addEventListener('touchstart', e => down(e.touches[0].clientX, e.touches[0].clientY));
             window.addEventListener('mouseup', e => up(e.clientX, e.clientY));
-            window.addEventListener('touchend', e => { if(e.changedTouches[0]) up(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
+
+            // 触摸事件 (针对手机优化)
+            el.addEventListener('touchstart', e => {
+                down(e.touches[0].clientX, e.touches[0].clientY);
+            }, {passive: true});
+
+            window.addEventListener('touchend', e => { 
+                if(e.changedTouches[0]) {
+                    up(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+                }
+            });
+            
             return bObj;
         }
 
