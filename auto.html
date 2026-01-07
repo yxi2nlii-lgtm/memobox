@@ -402,7 +402,16 @@
         window.addEventListener('touchmove', e => { if(draggedBubble){ const t=e.touches[0]; draggedBubble.x=t.clientX-60; draggedBubble.y=t.clientY-60; e.preventDefault(); } }, {passive: false});
 
         // --- 6. 交互组件 ---
-        function openModal(b) {
+function openModal(b) {
+            // 尝试从 b.element 或 b.el 获取 DOM 元素
+            const targetEl = b.element || b.el; 
+            
+            if (targetEl) {
+                const dot = targetEl.querySelector('.unread-dot');
+                if (dot) dot.remove();
+            }
+            // ---------------------------------------
+
             const visual = document.getElementById('m-visual');
             visual.innerHTML = (b.data.type==='img' || b.data.rawImg) ? `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">` : "";
             document.getElementById('m-text').innerText = b.data.content || "";
