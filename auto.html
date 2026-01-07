@@ -44,6 +44,28 @@
             50% { opacity: 0.7; transform: scale(1); }
         }
 
+        /* --- 极简对话设计 --- */
+    #comment-list {
+        text-align: left;
+        max-height: 160px;
+        overflow-y: auto;
+        margin: 15px 0;
+        font-family: 'Poppins', sans-serif;
+        border-top: 1px solid rgba(0,0,0,0.05);
+        padding-top: 10px;
+    }
+
+    .comment-item {
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 6px;
+        color: #333;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .c-label-user { font-weight: 600; color: #888; margin-right: 4px; }
+    .c-label-bot { font-weight: 600; color: #007AFF; margin-right: 4px; }
+        
         /* --- 弹窗样式 --- */
         #confirm-layer { 
             position: fixed; inset: 0; z-index: 20000; 
@@ -330,11 +352,13 @@
         }
 
         // --- 4. 气泡渲染逻辑 ---
+ // --- 4. 气泡渲染逻辑 (已更新：支持独立评论存储) ---
         function createBubbleElement(data, isStatus) {
             const el = document.createElement('div');
             el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
             el.innerHTML = `<div class="unread-dot"></div>${data.content}`; 
             stage.appendChild(el);
+            // 这里调用的 setupBubbleObject 会为它创建一个独立的 comments 数组
             bubbles.push(setupBubbleObject(el, data, isStatus));
             requestAnimationFrame(() => el.classList.add('spawned'));
         }
@@ -347,18 +371,30 @@
                 <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; pointer-events:none;">
             `;
             stage.appendChild(el);
+            // 图片气泡也会拥有自己独立的 comments 数组
             bubbles.push(setupBubbleObject(el, { type: 'img', content: caption, rawImg: imgSrc }, false));
             requestAnimationFrame(() => el.classList.add('spawned'));
         }
 
         function setupBubbleObject(el, data, isStatus) {
             const ww = window.innerWidth, wh = window.innerHeight;
-            const bObj = { el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, isDragged: false, data, isStatus };
+            const bObj = { 
+                el, 
+                x: ww/2-60, 
+                y: wh/2-60, 
+                vx: (Math.random()-0.5)*10, 
+                vy: (Math.random()-0.5)*10, 
+                isDragged: false, 
+                data, 
+                isStatus,
+                comments: [] // <-- 核心修改：这就是气泡的独立记忆库
+            };
             
             let startX, startY, startTime;
             const down = (x, y) => { startX = x; startY = y; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; };
             const up = (x, y) => {
                 if(!bObj.isDragged) return;
+                // 点击判定：时间短且位移小
                 if(Math.hypot(x-startX, y-startY) < 20 && (Date.now()-startTime)<300) openModal(bObj);
                 bObj.isDragged = false; draggedBubble = null;
             };
@@ -468,12 +504,38 @@ function openModal(b) {
         }
         function toggleLike() { document.getElementById('btn-like').classList.toggle('liked'); }
         function toggleCommentBox() { const a = document.getElementById('comment-area'); a.style.display = a.style.display === 'none' ? 'block' : 'none'; }
+// --- 6. 交互组件：Holder 对话版 ---
         function postComment() { 
-            const i = document.getElementById('comment-input'); 
-            if(i.value.trim()){ 
-                const d = document.createElement('div'); d.style.fontSize="12px"; d.style.color="#666"; d.style.marginTop="5px"; d.innerText=i.value;
-                document.getElementById('comment-list').appendChild(d); i.value=""; 
+            const input = document.getElementById('comment-input'); 
+            const val = input.value.trim();
+            if(val){ 
+                // 1. 立即显示你的评论
+                addCommentToUI(val, 'user');
+                input.value = ""; 
+
+                // 2. 5秒后触发对方固定回复
+                setTimeout(() => {
+                    addCommentToUI("hahah, :)", 'bot');
+                }, 5000);
             } 
+        }
+
+        function addCommentToUI(text, type) {
+            const list = document.getElementById('comment-list');
+            if(!list) return;
+
+            const d = document.createElement('div');
+            d.className = 'comment-item';
+            
+            if(type === 'user') {
+                d.innerHTML = `<span class="c-label-user">You:</span>${text}`;
+            } else {
+                d.innerHTML = `<span class="c-label-bot">Holder:</span>${text}`;
+            }
+            
+            list.appendChild(d);
+            // 自动滚动到最新评论
+            list.scrollTop = list.scrollHeight; 
         }
         function handleHardReset() { location.reload(); }
     </script>
