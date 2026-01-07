@@ -151,26 +151,29 @@
         </div>
     </div>
 
- <script>
-        // --- 基础配置 ---
+<script>
+        // --- 1. 基础物理配置 ---
         const stage = document.getElementById('stage');
         const canvas = document.getElementById('lineCanvas');
         const ctx = canvas.getContext('2d');
         let bubbles = [];
         let draggedBubble = null;
 
-        // --- Demo 数据 ---
+        // --- 2. Demo 数据逻辑 ---
+        // 第一条：只出现一次的开场白
+        const firstMessage = { type: 'urgent', text: "Someone picked it up! Your plant has a new home." };
+
+        // 循环列表：之后的温馨故事
         const demoMessages = [
-            { type: 'urgent', text: "Someone picked it up! Your plant has a new home." },
-            { mode: 'img', text: "It’s all settled in on my desk and looking very vibrant.", img: "https://images.unsplash.com/photo-1599023344151-51f129575027?q=80&w=600&auto=format&fit=crop" },
-            { mode: 'img', text: "A tiny new sprout just appeared; looks like it’s happy here.", img: "https://images.unsplash.com/photo-1510211559416-f6974287d3df?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'img', text: "It’s all settled in on my desk and looking very vibrant.", img: "https://picsum.photos/id/28/400/400" },
+            { mode: 'img', text: "A tiny new sprout just appeared; looks like it’s happy here.", img: "https://picsum.photos/id/152/400/400" },
             { mode: 'text', text: "Fresh water and a little trim today. Looking much cleaner now." },
-            { mode: 'img', text: "Caught some nice afternoon sun on the leaves, thought I’d share.", img: "https://images.unsplash.com/photo-1515446133109-60d1bc7ed276?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'img', text: "Caught some nice afternoon sun on the leaves, thought I’d share.", img: "https://picsum.photos/id/306/400/400" },
             { mode: 'text', text: "Moved it to a warmer spot now that it's getting cold. Hope you’re doing well." }
         ];
         let messageIndex = 0;
 
-        // --- 核心：保存并启动 Demo ---
+        // --- 3. 启动函数 ---
         function applyCustomization() {
             const fileInput = document.getElementById('upload-img');
             const name = document.getElementById('input-name').value;
@@ -183,33 +186,35 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                // 1. 立即更新本地界面，不看 Firebase 脸色
+                // 更新主界面头像和文字
                 document.getElementById('display-avatar').src = e.target.result;
                 document.getElementById('display-name').innerText = name;
                 document.getElementById('display-desc').innerText = desc || "A shared object.";
                 document.getElementById('display-date').innerText = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
                 document.querySelector('.bg-glass').style.backgroundImage = `url(${e.target.result})`;
 
-                // 2. 切换到主界面
                 document.body.classList.add('ready');
                 initPhysics();
 
-                // 3. 2秒后启动 Demo 循环
-                setTimeout(() => {
-                    startDemoLoop();
-                }, 2000); 
+                // 2秒后启动 Demo
+                setTimeout(startDemoSequence, 2000); 
             };
             reader.readAsDataURL(fileInput.files[0]);
         }
 
-        function startDemoLoop() {
-            sendNextDemoMessage(); // 先发第一个
-            setInterval(sendNextDemoMessage, 10000); // 之后每10秒发一个
+        function startDemoSequence() {
+            // 第一步：先发唯一的开场白
+            sendSpecificMessage(firstMessage);
+            
+            // 第二步：每隔10秒循环发送后面的内容
+            setInterval(() => {
+                sendSpecificMessage(demoMessages[messageIndex]);
+                messageIndex = (messageIndex + 1) % demoMessages.length;
+            }, 10000); 
         }
 
-        function sendNextDemoMessage() {
-            const msg = demoMessages[messageIndex];
-            // 确保退出 Hero 模式看到气泡
+        function sendSpecificMessage(msg) {
+            // 确保自动退出大图模式，展示气泡
             document.body.classList.remove('state-hero');
 
             if (msg.mode === 'img') {
@@ -218,20 +223,18 @@
                 createBubbleElement({ type: 'text', content: msg.text }, msg.type === 'urgent');
             }
 
-            // 显示顶部通知
+            // 顶部通知
             const notif = document.getElementById('top-notif');
             document.getElementById('notif-text').innerText = "A new memory arrives...";
             notif.classList.add('active');
             setTimeout(() => notif.classList.remove('active'), 4000);
-
-            messageIndex = (messageIndex + 1) % demoMessages.length;
         }
 
-        // --- 物理引擎、气泡创建、连线逻辑 (保持不变) ---
+        // --- 4. 气泡渲染逻辑 ---
         function createBubbleElement(data, isStatus) {
             const el = document.createElement('div');
             el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
-            el.innerHTML = `<div class="unread-dot"></div>${data.content}`;
+            el.innerHTML = `<div class="unread-dot"></div><div style="padding:15px; text-align:center;">${data.content}</div>`;
             stage.appendChild(el);
             bubbles.push(setupBubbleObject(el, data, isStatus));
             requestAnimationFrame(() => el.classList.add('spawned'));
@@ -240,7 +243,10 @@
         function createCustomPhotoBubble(imgSrc, caption) {
             const el = document.createElement('div');
             el.className = `bubble is-img`;
-            el.innerHTML = `<div class="unread-dot"></div><img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            el.innerHTML = `
+                <div class="unread-dot"></div>
+                <img src="${imgSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; pointer-events:none;">
+            `;
             stage.appendChild(el);
             bubbles.push(setupBubbleObject(el, { type: 'img', content: caption, rawImg: imgSrc }, false));
             requestAnimationFrame(() => el.classList.add('spawned'));
@@ -248,26 +254,26 @@
 
         function setupBubbleObject(el, data, isStatus) {
             const ww = window.innerWidth, wh = window.innerHeight;
+            // 初始速度略大，增加动感
             const bObj = { el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, isDragged: false, data, isStatus };
             
             let startX, startY, startTime;
-            el.addEventListener('mousedown', (e) => { startX = e.clientX; startY = e.clientY; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; });
-            el.addEventListener('touchstart', (e) => { const t = e.touches[0]; startX = t.clientX; startY = t.clientY; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; });
+            const down = (x, y) => { startX = x; startY = y; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; };
+            const up = (x, y) => {
+                if(!bObj.isDragged) return;
+                if(Math.hypot(x-startX, y-startY) < 20 && (Date.now()-startTime)<300) openModal(bObj);
+                bObj.isDragged = false; draggedBubble = null;
+            };
+
+            el.addEventListener('mousedown', e => down(e.clientX, e.clientY));
+            el.addEventListener('touchstart', e => down(e.touches[0].clientX, e.touches[0].clientY));
+            window.addEventListener('mouseup', e => up(e.clientX, e.clientY));
+            window.addEventListener('touchend', e => { if(e.changedTouches[0]) up(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
             
-            window.addEventListener('mouseup', (e) => {
-                if(!bObj.isDragged) return;
-                if(Math.hypot(e.clientX-startX, e.clientY-startY) < 20 && (Date.now()-startTime)<300) openModal(bObj);
-                bObj.isDragged = false; draggedBubble = null;
-            });
-            window.addEventListener('touchend', (e) => {
-                if(!bObj.isDragged) return;
-                const t = e.changedTouches[0];
-                if(Math.hypot(t.clientX-startX, t.clientY-startY) < 20 && (Date.now()-startTime)<300) openModal(bObj);
-                bObj.isDragged = false; draggedBubble = null;
-            });
             return bObj;
         }
 
+        // --- 5. 动画引擎 ---
         function animate(time) {
             const dpr = window.devicePixelRatio || 1;
             ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
@@ -306,12 +312,13 @@
             canvas.style.width = window.innerWidth + 'px'; canvas.style.height = window.innerHeight + 'px';
         }
         window.onresize = resizeCanvas;
-        window.addEventListener('mousemove', (e) => { if(draggedBubble){ draggedBubble.x=e.clientX-60; draggedBubble.y=e.clientY-60; } });
-        window.addEventListener('touchmove', (e) => { if(draggedBubble){ const t=e.touches[0]; draggedBubble.x=t.clientX-60; draggedBubble.y=t.clientY-60; e.preventDefault(); } }, {passive: false});
+        window.addEventListener('mousemove', e => { if(draggedBubble){ draggedBubble.x=e.clientX-60; draggedBubble.y=e.clientY-60; } });
+        window.addEventListener('touchmove', e => { if(draggedBubble){ const t=e.touches[0]; draggedBubble.x=t.clientX-60; draggedBubble.y=t.clientY-60; e.preventDefault(); } }, {passive: false});
 
+        // --- 6. 交互组件 ---
         function openModal(b) {
             const visual = document.getElementById('m-visual');
-            visual.innerHTML = (b.data.type==='img') ? `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">` : "";
+            visual.innerHTML = (b.data.type==='img' || b.data.rawImg) ? `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">` : "";
             document.getElementById('m-text').innerText = b.data.content || "";
             document.getElementById('modal-overlay').style.display = 'flex';
             setTimeout(() => document.getElementById('modal-overlay').classList.add('active'), 10);
