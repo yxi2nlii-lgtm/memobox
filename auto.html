@@ -151,95 +151,84 @@
         </div>
     </div>
 
-    <script>
-     <script>
-        // --- Firebase 配置 ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyC7OLP-hG6ekdLQewLrB9BFGQCuzRlbnTE",
-            authDomain: "memo-6a74a.firebaseapp.com",
-            projectId: "memo-6a74a",
-            storageBucket: "memo-6a74a.firebasestorage.app",
-            messagingSenderId: "487014379920",
-            appId: "1:487014379920:web:aa34c9662846c0a3d60315",
-            databaseURL: "https://memo-6a74a-default-rtdb.firebaseio.com/"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const configRef = db.ref('object_config');
-        const msgRef = db.ref('flow_messages');
 
+<script>
+        // --- 基础配置 ---
         const stage = document.getElementById('stage');
         const canvas = document.getElementById('lineCanvas');
         const ctx = canvas.getContext('2d');
         let bubbles = [];
         let draggedBubble = null;
-        const pageStartTime = Date.now();
 
-        // --- 弹窗控制逻辑 ---
-        function showConfirm(title, msg, onConfirm, isDanger = false) {
-            const layer = document.getElementById('confirm-layer');
-            const btn = document.getElementById('confirm-action-btn');
-            document.getElementById('confirm-title').innerText = title;
-            document.getElementById('confirm-msg').innerText = msg;
-            layer.style.display = 'flex';
-            setTimeout(() => layer.style.opacity = '1', 10);
-            btn.className = isDanger ? 'c-btn danger' : 'c-btn confirm';
-            btn.onclick = () => { onConfirm(); hideConfirm(); };
-        }
+        // --- Demo 数据 ---
+        const demoMessages = [
+            { type: 'urgent', text: "Someone picked it up! Your plant has a new home." },
+            { mode: 'img', text: "It’s all settled in on my desk and looking very vibrant.", img: "https://images.unsplash.com/photo-1599023344151-51f129575027?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'img', text: "A tiny new sprout just appeared; looks like it’s happy here.", img: "https://images.unsplash.com/photo-1510211559416-f6974287d3df?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'text', text: "Fresh water and a little trim today. Looking much cleaner now." },
+            { mode: 'img', text: "Caught some nice afternoon sun on the leaves, thought I’d share.", img: "https://images.unsplash.com/photo-1515446133109-60d1bc7ed276?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'text', text: "Moved it to a warmer spot now that it's getting cold. Hope you’re doing well." }
+        ];
+        let messageIndex = 0;
 
-        function hideConfirm() {
-            const layer = document.getElementById('confirm-layer');
-            layer.style.opacity = '0';
-            setTimeout(() => layer.style.display = 'none', 300);
-        }
+        // --- 核心：保存并启动 Demo ---
+        function applyCustomization() {
+            const fileInput = document.getElementById('upload-img');
+            const name = document.getElementById('input-name').value;
+            const desc = document.getElementById('input-desc').value;
 
-        function handleHardReset() {
-            showConfirm(
-                "Reset System?", 
-                "This will clear all cloud data and messages. This action cannot be undone.", 
-                () => {
-                    configRef.remove();
-                    msgRef.push({ type: 'clear_all', time: Date.now() }).then(() => {
-                        location.reload();
-                    });
-                },
-                true
-            );
-        }
-
-        // --- 物理引擎与渲染 ---
-        function resizeCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            ctx.scale(dpr, dpr);
-            canvas.style.width = window.innerWidth + 'px';
-            canvas.style.height = window.innerHeight + 'px';
-        }
-
-        configRef.on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                injectData(data);
-                document.body.classList.add('ready');
-                if (bubbles.length === 0) { initPhysics(); }
-            }
-        });
-
-        msgRef.limitToLast(15).on('child_added', (snapshot) => {
-            const data = snapshot.val();
-            if (data.type === 'clear_all') {
-                if (data.time && data.time > pageStartTime) location.reload();
+            if (!fileInput.files[0] || !name) {
+                alert("Please select an image and name.");
                 return;
             }
-            document.body.classList.remove('state-hero');
-            if (data.mode === 'img') {
-                createCustomPhotoBubble(data.img, data.text || "");
-            } else {
-                createBubbleElement({ type: 'text', content: data.text }, data.type === 'urgent');
-            }
-        });
 
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // 1. 立即更新本地界面，不看 Firebase 脸色
+                document.getElementById('display-avatar').src = e.target.result;
+                document.getElementById('display-name').innerText = name;
+                document.getElementById('display-desc').innerText = desc || "A shared object.";
+                document.getElementById('display-date').innerText = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+                document.querySelector('.bg-glass').style.backgroundImage = `url(${e.target.result})`;
+
+                // 2. 切换到主界面
+                document.body.classList.add('ready');
+                initPhysics();
+
+                // 3. 2秒后启动 Demo 循环
+                setTimeout(() => {
+                    startDemoLoop();
+                }, 2000); 
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+
+        function startDemoLoop() {
+            sendNextDemoMessage(); // 先发第一个
+            setInterval(sendNextDemoMessage, 10000); // 之后每10秒发一个
+        }
+
+        function sendNextDemoMessage() {
+            const msg = demoMessages[messageIndex];
+            // 确保退出 Hero 模式看到气泡
+            document.body.classList.remove('state-hero');
+
+            if (msg.mode === 'img') {
+                createCustomPhotoBubble(msg.img, msg.text);
+            } else {
+                createBubbleElement({ type: 'text', content: msg.text }, msg.type === 'urgent');
+            }
+
+            // 显示顶部通知
+            const notif = document.getElementById('top-notif');
+            document.getElementById('notif-text').innerText = "A new memory arrives...";
+            notif.classList.add('active');
+            setTimeout(() => notif.classList.remove('active'), 4000);
+
+            messageIndex = (messageIndex + 1) % demoMessages.length;
+        }
+
+        // --- 物理引擎、气泡创建、连线逻辑 (保持不变) ---
         function createBubbleElement(data, isStatus) {
             const el = document.createElement('div');
             el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
@@ -260,192 +249,88 @@
 
         function setupBubbleObject(el, data, isStatus) {
             const ww = window.innerWidth, wh = window.innerHeight;
-            const initialX = ww/2 + (Math.random()-0.5)*200 - 60;
-            const initialY = wh/2 + (Math.random()-0.5)*200 - 60;
-            const bObj = { el, x: initialX, y: initialY, vx: 0, vy: 0, isDragged: false, data, isStatus };
+            const bObj = { el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, isDragged: false, data, isStatus };
             
             let startX, startY, startTime;
-            const startAction = (e) => { 
-                const touch = e.touches ? e.touches[0] : e; 
-                startX = touch.clientX; startY = touch.clientY; startTime = Date.now();
-                draggedBubble = bObj; bObj.isDragged = true;
-                bObj.vx = 0; bObj.vy = 0;
-            };
-
-            const endAction = (e) => { 
-                if(!bObj.isDragged) return; 
-                const touch = e.changedTouches ? e.changedTouches[0] : e; 
-                const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY); 
-                const duration = Date.now() - startTime;
-                if (dist < 20 && duration < 300) {
-                    bObj.vx = 0; bObj.vy = 0;
-                    const dot = el.querySelector('.unread-dot'); 
-                    if(dot) dot.style.display = 'none'; 
-                    setTimeout(() => openModal(bObj), 50);
-                }
-                bObj.isDragged = false; draggedBubble = null; 
-            };
-
-            el.addEventListener('mousedown', startAction);
-            el.addEventListener('touchstart', startAction, {passive: false});
-            window.addEventListener('mouseup', endAction);
-            window.addEventListener('touchend', endAction);
+            el.addEventListener('mousedown', (e) => { startX = e.clientX; startY = e.clientY; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; });
+            el.addEventListener('touchstart', (e) => { const t = e.touches[0]; startX = t.clientX; startY = t.clientY; startTime = Date.now(); draggedBubble = bObj; bObj.isDragged = true; });
+            
+            window.addEventListener('mouseup', (e) => {
+                if(!bObj.isDragged) return;
+                if(Math.hypot(e.clientX-startX, e.clientY-startY) < 20 && (Date.now()-startTime)<300) openModal(bObj);
+                bObj.isDragged = false; draggedBubble = null;
+            });
+            window.addEventListener('touchend', (e) => {
+                if(!bObj.isDragged) return;
+                const t = e.changedTouches[0];
+                if(Math.hypot(t.clientX-startX, t.clientY-startY) < 20 && (Date.now()-startTime)<300) openModal(bObj);
+                bObj.isDragged = false; draggedBubble = null;
+            });
             return bObj;
         }
 
         function animate(time) {
             const dpr = window.devicePixelRatio || 1;
-            ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+            ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
             const ww = window.innerWidth, wh = window.innerHeight;
             const avatarEl = document.querySelector('.main-avatar');
-            let cx = ww / 2, cy = wh / 2;
-            if (avatarEl) {
-                const rect = avatarEl.getBoundingClientRect();
-                cx = rect.left + rect.width / 2; cy = rect.top + rect.height / 2;
-            }
-            ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-            ctx.lineWidth = 1.5;
+            let cx = ww/2, cy = wh/2;
+            if (avatarEl) { const r = avatarEl.getBoundingClientRect(); cx = r.left+r.width/2; cy = r.top+r.height/2; }
+            
+            ctx.beginPath(); ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.lineWidth = 1.5;
             bubbles.forEach((b, i) => {
-                const currX = b.x + 60, currY = b.y + 60;
-                let prevX = cx, prevY = cy;
-                if (i > 0) { prevX = bubbles[i-1].x + 60; prevY = bubbles[i-1].y + 60; }
-                ctx.moveTo(prevX, prevY);
-                ctx.quadraticCurveTo((prevX + currX)/2, (prevY + currY)/2 + Math.sin(time*0.002+i)*10, currX, currY);
+                const currX = b.x+60, currY = b.y+60;
+                let px = cx, py = cy; if(i>0) { px = bubbles[i-1].x+60; py = bubbles[i-1].y+60; }
+                ctx.moveTo(px, py); ctx.quadraticCurveTo((px+currX)/2, (py+currY)/2 + Math.sin(time*0.002+i)*10, currX, currY);
                 if (!b.isDragged) {
-                    const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
-                    b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
+                    const dx = currX-cx, dy = currY-cy, dist = Math.sqrt(dx*dx+dy*dy)||1;
+                    b.vx += (-dy/dist)*0.0008 + (cx-currX)*0.00003;
                     bubbles.forEach((b2, j) => {
-                        if(i === j) return;
-                        const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
-                        if(pdist < 135) { const p = (135 - pdist) * 0.02; b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p; }
+                        if(i===j) return;
+                        const pdx = (b2.x+60)-currX, pdy = (b2.y+60)-currY, pdist = Math.hypot(pdx, pdy)||1;
+                        if(pdist<135) { const p=(135-pdist)*0.02; b.vx-=(pdx/pdist)*p; b.vy-=(pdy/pdist)*p; }
                     });
-                    if(cdist < 100) { const p = (100 - cdist) * 0.05; b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p; }
-                    b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
+                    if(dist<100) { const p=(100-dist)*0.05; b.vx+=(dx/dist)*p; b.vy+=(dy/dist)*p; }
+                    b.vx*=0.92; b.vy*=0.92; b.x+=b.vx; b.y+=b.vy;
                 }
-                b.x = Math.max(0, Math.min(ww - 120, b.x));
-                b.y = Math.max(0, Math.min(wh - 120, b.y));
+                b.x = Math.max(0, Math.min(ww-120, b.x)); b.y = Math.max(0, Math.min(wh-120, b.y));
                 b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
             });
-            ctx.stroke();
-            requestAnimationFrame(animate);
-        }
-
-        window.addEventListener('mousemove', (e) => { if (draggedBubble) { draggedBubble.x = e.clientX - 60; draggedBubble.y = e.clientY - 60; } });
-        window.addEventListener('touchmove', (e) => { if (draggedBubble) { const touch = e.touches[0]; draggedBubble.x = touch.clientX - 60; draggedBubble.y = touch.clientY - 60; e.preventDefault(); } }, {passive: false});
-
-        function injectData(data) {
-            document.getElementById('display-name').innerText = data.name;
-            document.getElementById('display-desc').innerText = data.desc;
-            document.getElementById('display-date').innerText = data.dateStr;
-            document.getElementById('display-avatar').src = data.imgData;
-            document.querySelector('.bg-glass').style.backgroundImage = `url(${data.imgData})`;
-        }
-
-        function applyCustomization() {
-            const fileInput = document.getElementById('upload-img');
-            const name = document.getElementById('input-name').value;
-            const desc = document.getElementById('input-desc').value;
-            if (!fileInput.files[0] || !name) { alert("Please select an image and name."); return; }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvasImg = document.createElement('canvas');
-                    const MAX_W = 600;
-                    let w = img.width, h = img.height;
-                    if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; }
-                    canvasImg.width = w; canvasImg.height = h;
-                    canvasImg.getContext('2d').drawImage(img, 0, 0, w, h);
-                    configRef.set({
-                        imgData: canvasImg.toDataURL('image/jpeg', 0.6),
-                        name: name, desc: desc || "A shared object.",
-                        dateStr: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
-                    });
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(fileInput.files[0]);
+            ctx.stroke(); requestAnimationFrame(animate);
         }
 
         function initPhysics() { resizeCanvas(); animate(0); }
-        function toggleLike() { document.getElementById('btn-like').classList.toggle('liked'); }
-        function toggleCommentBox() { const area = document.getElementById('comment-area'); area.style.display = area.style.display === 'none' ? 'block' : 'none'; }
-        
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = window.innerWidth + 'px'; canvas.style.height = window.innerHeight + 'px';
+        }
+        window.onresize = resizeCanvas;
+        window.addEventListener('mousemove', (e) => { if(draggedBubble){ draggedBubble.x=e.clientX-60; draggedBubble.y=e.clientY-60; } });
+        window.addEventListener('touchmove', (e) => { if(draggedBubble){ const t=e.touches[0]; draggedBubble.x=t.clientX-60; draggedBubble.y=t.clientY-60; e.preventDefault(); } }, {passive: false});
+
         function openModal(b) {
             const visual = document.getElementById('m-visual');
-            visual.innerHTML = (b.data.type === 'img' && b.data.rawImg) ? `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">` : "";
+            visual.innerHTML = (b.data.type==='img') ? `<img src="${b.data.rawImg}" style="width:100%; border-radius:15px; margin-bottom:15px;">` : "";
             document.getElementById('m-text').innerText = b.data.content || "";
-            document.getElementById('comment-list').innerHTML = "";
-            const modal = document.getElementById('modal-overlay');
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('active'), 10);
+            document.getElementById('modal-overlay').style.display = 'flex';
+            setTimeout(() => document.getElementById('modal-overlay').classList.add('active'), 10);
         }
-
         function closeModal() {
-            const modal = document.getElementById('modal-overlay');
-            modal.classList.remove('active');
-            setTimeout(() => modal.style.display = 'none', 400);
+            document.getElementById('modal-overlay').classList.remove('active');
+            setTimeout(() => document.getElementById('modal-overlay').style.display = 'none', 400);
         }
-
+        function toggleLike() { document.getElementById('btn-like').classList.toggle('liked'); }
+        function toggleCommentBox() { const a = document.getElementById('comment-area'); a.style.display = a.style.display === 'none' ? 'block' : 'none'; }
         function postComment() { 
-            const input = document.getElementById('comment-input'); 
-            const list = document.getElementById('comment-list'); 
-            if(input.value.trim()) { 
-                const item = document.createElement('div'); 
-                item.style.fontSize="12px"; item.style.color="#666"; item.style.marginTop="5px"; 
-                item.innerText = input.value; list.appendChild(item); input.value = ""; 
+            const i = document.getElementById('comment-input'); 
+            if(i.value.trim()){ 
+                const d = document.createElement('div'); d.style.fontSize="12px"; d.style.color="#666"; d.style.marginTop="5px"; d.innerText=i.value;
+                document.getElementById('comment-list').appendChild(d); i.value=""; 
             } 
         }
-
-        window.onresize = resizeCanvas;
-
-        // ==========================
-        //   新增加的 DEMO 模拟逻辑
-        // ==========================
-        const demoMessages = [
-            { type: 'urgent', text: "Someone picked it up! Your plant has a new home." },
-            { mode: 'img', text: "It’s all settled in on my desk and looking very vibrant.", img: "https://images.unsplash.com/photo-1599023344151-51f129575027?q=80&w=600&auto=format&fit=crop" },
-            { mode: 'img', text: "A tiny new sprout just appeared; looks like it’s happy here.", img: "https://images.unsplash.com/photo-1510211559416-f6974287d3df?q=80&w=600&auto=format&fit=crop" },
-            { mode: 'text', text: "Fresh water and a little trim today. Looking much cleaner now." },
-            { mode: 'img', text: "Caught some nice afternoon sun on the leaves, thought I’d share.", img: "https://images.unsplash.com/photo-1515446133109-60d1bc7ed276?q=80&w=600&auto=format&fit=crop" },
-            { mode: 'text', text: "Moved it to a warmer spot now that it's getting cold. Hope you’re doing well." }
-        ];
-
-        let messageIndex = 0;
-        let demoStarted = false;
-
-        // 监视 body 上的 ready 类，一旦保存成功即触发 Demo
-        const demoObserver = new MutationObserver((mutations) => {
-            if (document.body.classList.contains('ready') && !demoStarted) {
-                demoStarted = true;
-                startDemoLoop();
-            }
-        });
-        demoObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-
-        function startDemoLoop() {
-            setTimeout(() => {
-                sendNextDemoMessage();
-                setInterval(sendNextDemoMessage, 30000); 
-            }, 20000);
-        }
-
-        function sendNextDemoMessage() {
-            const msg = demoMessages[messageIndex];
-            document.body.classList.remove('state-hero');
-            if (msg.mode === 'img') {
-                createCustomPhotoBubble(msg.img, msg.text);
-            } else {
-                createBubbleElement({ type: 'text', content: msg.text }, msg.type === 'urgent');
-            }
-            const notif = document.getElementById('top-notif');
-            const notifText = document.getElementById('notif-text');
-            notifText.innerText = "A new memory arrives...";
-            notif.classList.add('active');
-            setTimeout(() => notif.classList.remove('active'), 4000);
-            messageIndex = (messageIndex + 1) % demoMessages.length;
-        }
+        function handleHardReset() { location.reload(); }
     </script>
 </body>
 </html>
