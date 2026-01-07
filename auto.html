@@ -10,6 +10,40 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
 
     <style>
+        /* --- 新增：封面与涟漪样式 --- */
+        #cover-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 30000;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #ripple-canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .tap-to-start {
+            position: relative;
+            z-index: 30001;
+            color: white;
+            font-size: 11px;
+            letter-spacing: 4px;
+            font-weight: 300;
+            opacity: 0.6;
+            animation: breathe 3s infinite ease-in-out;
+            pointer-events: none;
+        }
+        @keyframes breathe {
+            0%, 100% { opacity: 0.2; transform: scale(0.95); }
+            50% { opacity: 0.7; transform: scale(1); }
+        }
+
         /* --- 弹窗样式 --- */
         #confirm-layer { 
             position: fixed; inset: 0; z-index: 20000; 
@@ -35,39 +69,38 @@
         .input-box { margin-bottom: 20px; }
         .input-box label { display: block; font-size: 12px; opacity: 0.6; margin-bottom: 8px; text-transform: uppercase; }
         .input-box input, .input-box textarea { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px; color: white; font-family: inherit; outline: none; }
-.generate-btn {
-    width: 100%;
-    padding: 16px;          /* 增加按钮高度 */
-    border-radius: 15px;
-    border: none;
-    background: #ffffff;
-    color: #000;
-    font-weight: 600;       /* 加粗字体 */
-    cursor: pointer;
-    font-size: 18px;        /* 这里调大字号，建议 18px-20px */
-    letter-spacing: 1px;    /* 让字母间距拉开一点，更有高级感 */
-}
+        .generate-btn {
+            width: 100%;
+            padding: 16px;          
+            border-radius: 15px;
+            border: none;
+            background: #ffffff;
+            color: #000;
+            font-weight: 600;       
+            cursor: pointer;
+            font-size: 18px;        
+            letter-spacing: 1px;    
+        }
         body.ready #setup-layer { opacity: 0; pointer-events: none; transform: translateY(-20px); }
         #reset-trigger { position: fixed; top: 20px; right: 20px; z-index: 5000; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; font-size: 10px; cursor: pointer; opacity: 0.3; }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
         body { background: #1a1a1a; font-family: 'Poppins', sans-serif; overflow: hidden; height: 100vh; width: 100vw; touch-action: none; }
         body.state-hero #stage, body.state-hero #lineCanvas { opacity: 0; pointer-events: none; }
         .center-hub { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; pointer-events: none; }
- .main-avatar { 
-    width: 76px; 
-    height: 76px; 
-    border-radius: 50%; 
-    background: rgba(255,255,255,0.1); 
-    overflow: hidden; 
-    transition: all 1s cubic-bezier(0.19, 1, 0.22, 1); 
-    cursor: pointer; 
-    pointer-events: auto; 
-    z-index: 4001; 
-    flex-shrink: 0; 
-    transform: translateY(0);
-    /* 核心统一：添加描边样式 */
-    border: 2px solid rgba(255,255,255,0.2); 
-}
+        .main-avatar { 
+            width: 76px; 
+            height: 76px; 
+            border-radius: 50%; 
+            background: rgba(255,255,255,0.1); 
+            overflow: hidden; 
+            transition: all 1s cubic-bezier(0.19, 1, 0.22, 1); 
+            cursor: pointer; 
+            pointer-events: auto; 
+            z-index: 4001; 
+            flex-shrink: 0; 
+            transform: translateY(0);
+            border: 2px solid rgba(255,255,255,0.2); 
+        }
         body.state-hero .main-avatar { width: 280px; height: 280px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); transform: translateY(-60px); }
         .hero-text-block { position: absolute; top: 50%; left: 0; width: 100%; padding-top: 100px; text-align: center; color: white; transition: all 0.7s ease; pointer-events: none; opacity: 0; transform: translateY(20px); }
         body.state-hero .hero-text-block { opacity: 1; transform: translateY(0); }
@@ -101,6 +134,11 @@
     </style>
 </head>
 <body class="state-hero">
+
+    <div id="cover-layer" onclick="handleStart(event)">
+        <canvas id="ripple-canvas"></canvas>
+        <div class="tap-to-start">TAP TO ENTER MEMORY</div>
+    </div>
 
     <div id="setup-layer">
         <div class="setup-card">
@@ -152,6 +190,48 @@
     </div>
 
 <script>
+        // --- 1. 新增：封面涟漪逻辑 ---
+        const rCanvas = document.getElementById('ripple-canvas');
+        const rCtx = rCanvas.getContext('2d');
+        let ripples = [];
+
+        function resizeRippleCanvas() {
+            rCanvas.width = window.innerWidth;
+            rCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeRippleCanvas);
+        resizeRippleCanvas();
+
+        function handleStart(e) {
+            const x = e.clientX || e.touches[0].clientX;
+            const y = e.clientY || e.touches[0].clientY;
+            ripples.push({ x, y, r: 0, a: 1 });
+            
+            // 延迟切场，等涟漪扩散
+            setTimeout(() => {
+                document.getElementById('cover-layer').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('cover-layer').style.display = 'none';
+                }, 1000);
+            }, 400);
+        }
+
+        function animateRipple() {
+            rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
+            ripples.forEach((rp, i) => {
+                rp.r += 10;
+                rp.a -= 0.02;
+                if (rp.a <= 0) ripples.splice(i, 1);
+                rCtx.beginPath();
+                rCtx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+                rCtx.strokeStyle = `rgba(255, 255, 255, ${rp.a})`;
+                rCtx.lineWidth = 2;
+                rCtx.stroke();
+            });
+            requestAnimationFrame(animateRipple);
+        }
+        animateRipple();
+
         // --- 1. 基础物理配置 ---
         const stage = document.getElementById('stage');
         const canvas = document.getElementById('lineCanvas');
@@ -160,10 +240,8 @@
         let draggedBubble = null;
 
         // --- 2. Demo 数据逻辑 ---
-        // 第一条：只出现一次的开场白
         const firstMessage = { type: 'urgent', text: "Someone picked it up! Your plant has a new home." };
 
-        // 循环列表：之后的温馨故事
         const demoMessages = [
             { mode: 'img', text: "It’s all settled in on my desk and looking very vibrant.", img: "https://picsum.photos/id/28/400/400" },
             { mode: 'img', text: "A tiny new sprout just appeared; looks like it’s happy here.", img: "https://picsum.photos/id/152/400/400" },
@@ -186,7 +264,6 @@
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                // 更新主界面头像和文字
                 document.getElementById('display-avatar').src = e.target.result;
                 document.getElementById('display-name').innerText = name;
                 document.getElementById('display-desc').innerText = desc || "A shared object.";
@@ -196,17 +273,13 @@
                 document.body.classList.add('ready');
                 initPhysics();
 
-                // 2秒后启动 Demo
                 setTimeout(startDemoSequence, 2000); 
             };
             reader.readAsDataURL(fileInput.files[0]);
         }
 
         function startDemoSequence() {
-            // 第一步：先发唯一的开场白
             sendSpecificMessage(firstMessage);
-            
-            // 第二步：每隔10秒循环发送后面的内容
             setInterval(() => {
                 sendSpecificMessage(demoMessages[messageIndex]);
                 messageIndex = (messageIndex + 1) % demoMessages.length;
@@ -214,7 +287,6 @@
         }
 
         function sendSpecificMessage(msg) {
-            // 确保自动退出大图模式，展示气泡
             document.body.classList.remove('state-hero');
 
             if (msg.mode === 'img') {
@@ -223,23 +295,21 @@
                 createBubbleElement({ type: 'text', content: msg.text }, msg.type === 'urgent');
             }
 
-            // 顶部通知
             const notif = document.getElementById('top-notif');
             document.getElementById('notif-text').innerText = "A new memory arrives...";
             notif.classList.add('active');
             setTimeout(() => notif.classList.remove('active'), 4000);
         }
 
-     // --- 4. 气泡渲染逻辑 (修正版) ---
-function createBubbleElement(data, isStatus) {
-    const el = document.createElement('div');
-    el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
-    // 恢复第一版写法：不添加 padding div，由 CSS 控制气泡内边距
-    el.innerHTML = `<div class="unread-dot"></div>${data.content}`; 
-    stage.appendChild(el);
-    bubbles.push(setupBubbleObject(el, data, isStatus));
-    requestAnimationFrame(() => el.classList.add('spawned'));
-}
+        // --- 4. 气泡渲染逻辑 ---
+        function createBubbleElement(data, isStatus) {
+            const el = document.createElement('div');
+            el.className = `bubble is-${data.type} ${isStatus ? 'is-status' : ''}`;
+            el.innerHTML = `<div class="unread-dot"></div>${data.content}`; 
+            stage.appendChild(el);
+            bubbles.push(setupBubbleObject(el, data, isStatus));
+            requestAnimationFrame(() => el.classList.add('spawned'));
+        }
 
         function createCustomPhotoBubble(imgSrc, caption) {
             const el = document.createElement('div');
@@ -255,7 +325,6 @@ function createBubbleElement(data, isStatus) {
 
         function setupBubbleObject(el, data, isStatus) {
             const ww = window.innerWidth, wh = window.innerHeight;
-            // 初始速度略大，增加动感
             const bObj = { el, x: ww/2-60, y: wh/2-60, vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10, isDragged: false, data, isStatus };
             
             let startX, startY, startTime;
