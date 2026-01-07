@@ -152,6 +152,7 @@
     </div>
 
     <script>
+     <script>
         // --- Firebase 配置 ---
         const firebaseConfig = {
             apiKey: "AIzaSyC7OLP-hG6ekdLQewLrB9BFGQCuzRlbnTE",
@@ -257,145 +258,81 @@
             requestAnimationFrame(() => el.classList.add('spawned'));
         }
 
-   function setupBubbleObject(el, data, isStatus) {
-    const ww = window.innerWidth, wh = window.innerHeight;
-    const initialX = ww/2 + (Math.random()-0.5)*200 - 60;
-    const initialY = wh/2 + (Math.random()-0.5)*200 - 60;
-    const bObj = { el, x: initialX, y: initialY, vx: 0, vy: 0, isDragged: false, data, isStatus };
-    
-    let startX, startY, startTime;
-
-    const startAction = (e) => { 
-        const touch = e.touches ? e.touches[0] : e; 
-        startX = touch.clientX; 
-        startY = touch.clientY; 
-        startTime = Date.now();
-        
-        draggedBubble = bObj; 
-        bObj.isDragged = true; 
-        // 关键：点击瞬间清空速度，防止它自己“滑走”导致判定失败
-        bObj.vx = 0; bObj.vy = 0;
-    };
-
-    const endAction = (e) => { 
-        if(!bObj.isDragged) return; 
-        
-        const touch = e.changedTouches ? e.changedTouches[0] : e; 
-        const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY); 
-        const duration = Date.now() - startTime;
-
-        // 判定加固：只要位移小于 20px 且 时间小于 300ms，就视为点击
-        if (dist < 20 && duration < 300) {
-            // 确保不会触发拖拽逻辑
-            bObj.vx = 0; bObj.vy = 0;
+        function setupBubbleObject(el, data, isStatus) {
+            const ww = window.innerWidth, wh = window.innerHeight;
+            const initialX = ww/2 + (Math.random()-0.5)*200 - 60;
+            const initialY = wh/2 + (Math.random()-0.5)*200 - 60;
+            const bObj = { el, x: initialX, y: initialY, vx: 0, vy: 0, isDragged: false, data, isStatus };
             
-            const dot = el.querySelector('.unread-dot'); 
-            if(dot) dot.style.display = 'none'; 
-            
-            // 延迟 50ms 开启弹窗，避开浏览器对 touch 事件的默认行为冲突
-            setTimeout(() => openModal(bObj), 50);
+            let startX, startY, startTime;
+            const startAction = (e) => { 
+                const touch = e.touches ? e.touches[0] : e; 
+                startX = touch.clientX; startY = touch.clientY; startTime = Date.now();
+                draggedBubble = bObj; bObj.isDragged = true;
+                bObj.vx = 0; bObj.vy = 0;
+            };
+
+            const endAction = (e) => { 
+                if(!bObj.isDragged) return; 
+                const touch = e.changedTouches ? e.changedTouches[0] : e; 
+                const dist = Math.hypot(touch.clientX - startX, touch.clientY - startY); 
+                const duration = Date.now() - startTime;
+                if (dist < 20 && duration < 300) {
+                    bObj.vx = 0; bObj.vy = 0;
+                    const dot = el.querySelector('.unread-dot'); 
+                    if(dot) dot.style.display = 'none'; 
+                    setTimeout(() => openModal(bObj), 50);
+                }
+                bObj.isDragged = false; draggedBubble = null; 
+            };
+
+            el.addEventListener('mousedown', startAction);
+            el.addEventListener('touchstart', startAction, {passive: false});
+            window.addEventListener('mouseup', endAction);
+            window.addEventListener('touchend', endAction);
+            return bObj;
         }
 
-        bObj.isDragged = false; 
-        draggedBubble = null; 
-    };
-
-    el.addEventListener('mousedown', startAction);
-    el.addEventListener('touchstart', startAction, {passive: false});
-    // 注意：move 事件我们依然监听，但不再在里面写 isPossibleClick = false
-    // 这样即便用户手指微抖，只要最后松开时位移不大，依然算点击
-    
-    window.addEventListener('mouseup', endAction);
-    window.addEventListener('touchend', endAction);
-
-    return bObj;
-}
-
-function animate(time) {
-            // 1. 清屏（考虑 DPR 缩放）
+        function animate(time) {
             const dpr = window.devicePixelRatio || 1;
             ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-            
-            const ww = window.innerWidth;
-            const wh = window.innerHeight;
-
-            // --- 核心修正：动态获取头像中心，防止坐标偏移 ---
+            const ww = window.innerWidth, wh = window.innerHeight;
             const avatarEl = document.querySelector('.main-avatar');
-            let cx = ww / 2;
-            let cy = wh / 2;
-            
+            let cx = ww / 2, cy = wh / 2;
             if (avatarEl) {
                 const rect = avatarEl.getBoundingClientRect();
-                cx = rect.left + rect.width / 2;
-                cy = rect.top + rect.height / 2;
+                cx = rect.left + rect.width / 2; cy = rect.top + rect.height / 2;
             }
-
             ctx.beginPath();
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.lineWidth = 1.5;
-
             bubbles.forEach((b, i) => {
-                const currX = b.x + 60; // 气泡中心
-                const currY = b.y + 60;
-
-                // --- 沿用你要求的逻辑：i=0连中心，i>0连前一个 ---
-                let prevX = cx;
-                let prevY = cy;
-                if (i > 0) {
-                    prevX = bubbles[i-1].x + 60;
-                    prevY = bubbles[i-1].y + 60;
-                }
-
+                const currX = b.x + 60, currY = b.y + 60;
+                let prevX = cx, prevY = cy;
+                if (i > 0) { prevX = bubbles[i-1].x + 60; prevY = bubbles[i-1].y + 60; }
                 ctx.moveTo(prevX, prevY);
-                // 绘制贝塞尔曲线增加流动感
-                ctx.quadraticCurveTo(
-                    (prevX + currX) / 2, 
-                    (prevY + currY) / 2 + Math.sin(time * 0.002 + i) * 10, 
-                    currX, 
-                    currY
-                );
-
-                // --- 物理排斥逻辑（保持不变） ---
+                ctx.quadraticCurveTo((prevX + currX)/2, (prevY + currY)/2 + Math.sin(time*0.002+i)*10, currX, currY);
                 if (!b.isDragged) {
                     const cdx = currX - cx, cdy = currY - cy, cdist = Math.sqrt(cdx*cdx + cdy*cdy) || 1;
-                    b.vx += (-cdy/cdist) * 0.0008; 
-                    b.vx += (cx - currX) * 0.00003;
-                    
+                    b.vx += (-cdy/cdist) * 0.0008; b.vx += (cx - currX) * 0.00003;
                     bubbles.forEach((b2, j) => {
                         if(i === j) return;
                         const pdx = (b2.x+60) - currX, pdy = (b2.y+60) - currY, pdist = Math.hypot(pdx, pdy) || 1;
-                        if(pdist < 135) { 
-                            const p = (135 - pdist) * 0.02; 
-                            b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p; 
-                        }
+                        if(pdist < 135) { const p = (135 - pdist) * 0.02; b.vx -= (pdx/pdist)*p; b.vy -= (pdy/pdist)*p; }
                     });
-                    if(cdist < 100) { 
-                        const p = (100 - cdist) * 0.05; 
-                        b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p; 
-                    }
+                    if(cdist < 100) { const p = (100 - cdist) * 0.05; b.vx += (cdx/cdist)*p; b.vy += (cdy/cdist)*p; }
                     b.vx *= 0.92; b.vy *= 0.92; b.x += b.vx; b.y += b.vy;
                 }
-                
-                // 边界限制
                 b.x = Math.max(0, Math.min(ww - 120, b.x));
                 b.y = Math.max(0, Math.min(wh - 120, b.y));
                 b.el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
             });
-
             ctx.stroke();
             requestAnimationFrame(animate);
         }
 
-        window.addEventListener('mousemove', (e) => { 
-            if (draggedBubble) { draggedBubble.x = e.clientX - 60; draggedBubble.y = e.clientY - 60; } 
-        });
-        window.addEventListener('touchmove', (e) => { 
-            if (draggedBubble) { 
-                const touch = e.touches[0];
-                draggedBubble.x = touch.clientX - 60; draggedBubble.y = touch.clientY - 60; 
-                e.preventDefault(); 
-            } 
-        }, {passive: false});
+        window.addEventListener('mousemove', (e) => { if (draggedBubble) { draggedBubble.x = e.clientX - 60; draggedBubble.y = e.clientY - 60; } });
+        window.addEventListener('touchmove', (e) => { if (draggedBubble) { const touch = e.touches[0]; draggedBubble.x = touch.clientX - 60; draggedBubble.y = touch.clientY - 60; e.preventDefault(); } }, {passive: false});
 
         function injectData(data) {
             document.getElementById('display-name').innerText = data.name;
@@ -422,8 +359,7 @@ function animate(time) {
                     canvasImg.getContext('2d').drawImage(img, 0, 0, w, h);
                     configRef.set({
                         imgData: canvasImg.toDataURL('image/jpeg', 0.6),
-                        name: name,
-                        desc: desc || "A shared object.",
+                        name: name, desc: desc || "A shared object.",
                         dateStr: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
                     });
                 };
@@ -463,6 +399,53 @@ function animate(time) {
         }
 
         window.onresize = resizeCanvas;
+
+        // ==========================
+        //   新增加的 DEMO 模拟逻辑
+        // ==========================
+        const demoMessages = [
+            { type: 'urgent', text: "Someone picked it up! Your plant has a new home." },
+            { mode: 'img', text: "It’s all settled in on my desk and looking very vibrant.", img: "https://images.unsplash.com/photo-1599023344151-51f129575027?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'img', text: "A tiny new sprout just appeared; looks like it’s happy here.", img: "https://images.unsplash.com/photo-1510211559416-f6974287d3df?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'text', text: "Fresh water and a little trim today. Looking much cleaner now." },
+            { mode: 'img', text: "Caught some nice afternoon sun on the leaves, thought I’d share.", img: "https://images.unsplash.com/photo-1515446133109-60d1bc7ed276?q=80&w=600&auto=format&fit=crop" },
+            { mode: 'text', text: "Moved it to a warmer spot now that it's getting cold. Hope you’re doing well." }
+        ];
+
+        let messageIndex = 0;
+        let demoStarted = false;
+
+        // 监视 body 上的 ready 类，一旦保存成功即触发 Demo
+        const demoObserver = new MutationObserver((mutations) => {
+            if (document.body.classList.contains('ready') && !demoStarted) {
+                demoStarted = true;
+                startDemoLoop();
+            }
+        });
+        demoObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+        function startDemoLoop() {
+            setTimeout(() => {
+                sendNextDemoMessage();
+                setInterval(sendNextDemoMessage, 30000); 
+            }, 20000);
+        }
+
+        function sendNextDemoMessage() {
+            const msg = demoMessages[messageIndex];
+            document.body.classList.remove('state-hero');
+            if (msg.mode === 'img') {
+                createCustomPhotoBubble(msg.img, msg.text);
+            } else {
+                createBubbleElement({ type: 'text', content: msg.text }, msg.type === 'urgent');
+            }
+            const notif = document.getElementById('top-notif');
+            const notifText = document.getElementById('notif-text');
+            notifText.innerText = "A new memory arrives...";
+            notif.classList.add('active');
+            setTimeout(() => notif.classList.remove('active'), 4000);
+            messageIndex = (messageIndex + 1) % demoMessages.length;
+        }
     </script>
 </body>
 </html>
